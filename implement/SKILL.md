@@ -46,8 +46,8 @@ description: 按 ticket 实现功能。主会话负责编排（选 ticket、确�
 
 **默认 / `subagent` 模式 → 分派给 `implementer` 子 agent**，传入：
 - ticket 文件路径（含验收标准、`Blocked by`）
-- ticket 的 `**来源**: plan P<N>` 对应 plan 条目（技术方案、风险点）
-- **plan 路径**：`.scratch/<feature>/plan.md`（implementer 读它获取 P<N> 条目全文）
+- ticket 的 `**来源**: plan P<N>` 对应 plan 条目（技术方案、风险点、**改动锚点**）
+- **plan 路径**：`.scratch/<feature>/plan.md`（implementer 读它获取 P<N> 条目全文，含改动锚点 `文件#方法`）
 - spec 路径（含约定的 test seams、产品边界）
 - commit-strategy 路径
 - 相关代码/测试位置指引
@@ -64,11 +64,11 @@ description: 按 ticket 实现功能。主会话负责编排（选 ticket、确�
 
 ### Step 3.5: ticket 方向修正（主会话）
 
-当 ticket 的技术落地方向在现有架构中不成立时（此时 spec 大方向通常没错，是 ticket 理解错了）：
+当 ticket 的技术落地方向在现有架构中不成立时（此时 spec 大方向通常没错，是 ticket 理解错了），**或当 plan 的改动锚点（`文件#方法`）在当前代码里找不到**（方法被改名/挪位/删除，锚点腐化）：
 
 **1. 对齐现有架构**
 
-摸清真实的现有结构（调用通道、数据流、边界），确认 ticket 原方案为何在此架构下不成立。
+摸清真实的现有结构（调用通道、数据流、边界），确认 ticket 原方案为何在此架构下不成立。锚点腐化情形下：确认目标方法的当前实际位置/名称。
 
 **2. 修正 ticket**
 

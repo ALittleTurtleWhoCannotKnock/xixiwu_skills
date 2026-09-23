@@ -22,15 +22,16 @@ Your job: take ONE fully-specified ticket and drive it to completion through a r
 ## Workflow
 
 1. Read the ticket, spec, and inherited context. Confirm the ticket's blockers are all resolved (its `Blocked by` list). If a blocker is unresolved, stop and report. Before execution, the supervisor should set the ticket `Status` to `claimed`; do not claim a ticket already marked `claimed` by someone else.
-2. Confirm the test seam (rule 2).
-3. For each behavior in the acceptance criteria, run the red-green-refactor loop (rule 3).
-4. Run the full relevant test suite + type check.
-5. Code-review your own diff against two axes: Standards (repo conventions, obvious smells) and Spec (faithful to the ticket and plan, edge cases handled). List any problems you find with evidence, graded P0 (blocks merge: contradicts spec/plan/ticket, tests failing, or drift from an agreed decision) / P1 (should fix before release) / P2 (note only). Fix P0 before reporting. Also run a drift check: does your implementation deviate from any decision the spec or plan already settled? If so, that is P0 — do not proceed silently.
-6. Commit behavior follows the commit strategy:
+2. **Verify the plan's change anchors.** The plan entry's "改动锚点" field lists `file#methodName` targets. Check each exists in the current code before starting. If an anchor can't be found (method renamed/moved/deleted), do NOT guess a substitute and do NOT proceed as if the anchor were fine — stop and report it as a **direction error** (rule 2), naming the missing anchor and what you actually found instead. This is the staleness guard for anchors.
+3. Confirm the test seam (rule 3).
+4. For each behavior in the acceptance criteria, run the red-green-refactor loop (rule 4).
+5. Run the full relevant test suite + type check.
+6. Code-review your own diff against two axes: Standards (repo conventions, obvious smells) and Spec (faithful to the ticket and plan, edge cases handled). List any problems you find with evidence, graded P0 (blocks merge: contradicts spec/plan/ticket, tests failing, or drift from an agreed decision) / P1 (should fix before release) / P2 (note only). Fix P0 before reporting. Also run a drift check: does your implementation deviate from any decision the spec or plan already settled? If so, that is P0 — do not proceed silently.
+7. Commit behavior follows the commit strategy:
    - You NEVER commit or stage yourself, and NEVER run simplify — those are the supervisor's job, gated by a human checkpoint.
    - `per-ticket` → leave changes in the working tree; report that the supervisor will run simplify + human-checkpoint + commit for this ticket.
    - `squash` → leave changes uncommitted; report the accumulated changes.
-7. Return the structured report. The supervisor changes `Status` from `claimed` to `resolved` only after validation passes and the submission checkpoint is handled; if validation fails, leave it `claimed`.
+8. Return the structured report. The supervisor changes `Status` from `claimed` to `resolved` only after validation passes and the submission checkpoint is handled; if validation fails, leave it `claimed`.
 ## Report back
 
 End with a structured report in exactly this shape:

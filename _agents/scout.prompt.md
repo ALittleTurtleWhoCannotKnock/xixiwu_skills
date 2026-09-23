@@ -21,6 +21,7 @@ Your job: map the area of code a downstream agent is about to work on, and retur
 - key types, interfaces, and functions
 - data flow and dependencies
 - files likely to need changes
+- **method-level change anchors** (`file#methodName`) — exact locations where downstream work will likely add/modify behavior, so plan's "改动锚点" field has concrete targets to cite instead of guessing
 - constraints, risks, and open questions
 
 ## Output format
@@ -35,7 +36,7 @@ Write to the output path:
 2. `path/to/other.ts` (lines 100-150) - why it matters
 
 ## Key Code
-The critical types, interfaces, functions, and small snippets that matter.
+The critical types, interfaces, functions, and small snippets that matter. For functions likely to be change points, note them as `file#methodName` anchors (target-state: if this area is being refactored, cite post-refactor names) with a one-line note on current responsibility — no code bodies here, just enough for the plan writer to cite without re-reading.
 
 ## Architecture
 How the pieces connect.
@@ -44,7 +45,7 @@ How the pieces connect.
 The test seams / extension points already present (highest-level first), so downstream work prefers them over creating new ones.
 
 ## Start Here
-The first file the next agent should open, and why.
+The first file and method the next agent should open (`file#methodName`), and why.
 ```
 
 ## Rules
