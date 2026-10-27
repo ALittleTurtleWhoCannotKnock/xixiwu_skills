@@ -149,5 +149,229 @@ class BuildTests(unittest.TestCase):
         self.assert_pi_model("provider/project-model")
 
 
+class InstallTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="dev-flow-install-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.bundle = self.root / "skill bundle"
+        shutil.copytree(ROOT, self.bundle,
+                        ignore=shutil.ignore_patterns(".git", "__pycache__", ".DS_Store", "tests"))
+        self.home = self.root / "user home"
+        self.project = self.root / "target project"
+        self.project.mkdir()
+        self.skills = sorted(path.parent.name for path in self.bundle.glob("*/SKILL.md"))
+        self.locations = {"pi": ".pi/agent/skills", "claude-code": ".claude/skills",
+                          "codex": ".agents/skills"}
+
+    def install(self, *args, home=None, model=None):
+        env = os.environ.copy()
+        # Keep both the explicit destination and HOME isolated, even on regressions.
+        env["HOME"] = str(home or self.home)
+        env.pop("DEV_FLOW_MODEL", None)
+        if model is not None:
+            env["DEV_FLOW_MODEL"] = model
+        return subprocess.run(
+            ["bash", str(self.bundle / "install.sh"), *args,
+             "--home", str(home or self.home)],
+            cwd=self.project, env=env, text=True, capture_output=True,
+        )
+
+    def backup_files(self):
+        return sorted((self.home / ".local/share/dev-flow-skills/backups").rglob("SKILL.md"))
+
+    def test_install_targets_include_shared_resources_and_agents(self):
+        for target in (*self.locations, "all"):
+            with self.subTest(target=target):
+                home = self.root / target
+                result = self.install(target, home=home)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                for tool, location in self.locations.items():
+                    folder = home / location
+                    if target not in (tool, "all"):
+                        self.assertFalse(folder.exists())
+                        continue
+                    for name in (*self.skills, "_agents"):
+                        self.assertTrue((folder / name).is_symlink(), folder / name)
+                        self.assertEqual((folder / name).resolve(), self.bundle / name)
+                    self.assertEqual((folder / "to-plan/../_agents/workflow-contract.md").read_bytes(),
+                                     (self.bundle / "_agents/workflow-contract.md").read_bytes())
+                for tool, location in (("pi", ".pi/agent/agents"),
+                                       ("claude-code", ".claude/agents")):
+                    files = sorted((home / location).glob("*.md"))
+                    self.assertEqual(len(files), 5 if target in (tool, "all") else 0)
+                    for path in files:
+                        header = path.read_text().partition("\n---\n")[0]
+                        self.assertNotIn("\nmodel:", header)
+                self.assertFalse((self.project / "docs").exists())
+
+    def test_repeated_install_and_source_updates(self):
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / ".local").exists())
+        (self.bundle / "to-plan/SKILL.md").write_text("updated skill\n")
+        for location in self.locations.values():
+            self.assertEqual((self.home / location / "to-plan/SKILL.md").read_text(), "updated skill\n")
+        updated = b"\nUpdated scout instructions.\n"
+        (self.bundle / "_agents/scout.prompt.md").write_bytes(updated)
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for location in (".pi/agent/agents", ".claude/agents"):
+            self.assertTrue((self.home / location / "scout.md").read_bytes().endswith(b"\n" + updated))
+        backups = list((self.home / ".local").rglob("scout.md"))
+        self.assertEqual(len(backups), 2)
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(list((self.home / ".local").rglob("scout.md"))), 2)
+
+    def test_agent_updates_keep_user_frontmatter_and_backup_previous_body(self):
+        header = ("---\r\nname: scout\r\nmodel: user/chosen-model\r\n"
+                  "tools:\r\n  - Read\r\n  - Bash\r\ncustom: |\r\n  user value\r\n---\r\n")
+        previous = (header + "\r\nold prompt\r\n").encode()
+        for location in (".pi/agent/agents", ".claude/agents"):
+            path = self.home / location / "scout.md"
+            path.parent.mkdir(parents=True)
+            path.write_bytes(previous)
+            path.chmod(0o600)
+        managed = self.home / ".cc-switch/agents/scout.md"
+        managed.parent.mkdir(parents=True)
+        shutil.move(str(self.home / ".claude/agents/scout.md"), str(managed))
+        (self.home / ".claude/agents/scout.md").symlink_to(managed)
+        result = self.install("all", model="different/installation-model")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        body = (self.bundle / "_agents/scout.prompt.md").read_bytes()
+        for location in (".pi/agent/agents", ".claude/agents"):
+            path = self.home / location / "scout.md"
+            self.assertEqual(path.read_bytes(), header.encode() + b"\n" + body)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertFalse(path.is_symlink())
+        self.assertEqual(managed.read_bytes(), previous)
+        backups = list((self.home / ".local").rglob("scout.md"))
+        self.assertEqual(len(backups), 2)
+        self.assertTrue(all(path.read_bytes() == previous for path in backups))
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(list((self.home / ".local").rglob("scout.md"))), 2)
+
+    def test_migration_backs_up_copies_and_links_without_editing_their_targets(self):
+        old_bundles = [self.home / location for location in
+                       (".pi/agent/skills/dev-flow-skills", ".codex/skills/dev-flow-skills")]
+        for old in old_bundles:
+            old.mkdir(parents=True)
+            for name in self.skills:
+                (old / name).mkdir()
+                (old / name / "SKILL.md").write_text("old bundled skill\n")
+            (old / "_agents").mkdir()
+        managed = self.home / ".cc-switch/skills/to-plan"
+        managed.mkdir(parents=True)
+        (managed / "SKILL.md").write_text("managed skill\n")
+        for folder in (".agents/skills", ".claude/skills", ".codex/skills"):
+            path = self.home / folder / "to-plan"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.symlink_to(managed, target_is_directory=True)
+        unrelated = self.home / ".claude/skills/user-only/SKILL.md"
+        unrelated.parent.mkdir()
+        unrelated.write_text("user skill\n")
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for old in old_bundles:
+            self.assertFalse(old.exists(), old)
+        self.assertFalse((self.home / ".codex/skills/to-plan").exists())
+        self.assertEqual((managed / "SKILL.md").read_text(), "managed skill\n")
+        self.assertEqual(unrelated.read_text(), "user skill\n")
+        self.assertEqual(len(self.backup_files()), len(old_bundles) * len(self.skills))
+        backup_links = [p for p in (self.home / ".local").rglob("*") if p.is_symlink()]
+        self.assertEqual(len(backup_links), 3)
+        self.assertTrue(all(p.resolve() == managed for p in backup_links))
+
+    def test_dry_run_and_invalid_input_leave_destinations_untouched(self):
+        old = self.home / ".claude/skills/to-plan/SKILL.md"
+        old.parent.mkdir(parents=True)
+        old.write_text("previous skill\n")
+        result = self.install("all", "--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(old.read_text(), "previous skill\n")
+        self.assertFalse((self.home / ".pi").exists())
+        self.assertFalse((self.home / ".local").exists())
+        for args in ((), ("unknown",), ("pi", "--unknown"),
+                     ("pi", "--project-root", str(self.root / "missing"))):
+            with self.subTest(args=args):
+                result = self.install(*args)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(old.read_text(), "previous skill\n")
+                self.assertFalse((self.home / ".pi").exists())
+
+    def test_invalid_existing_agent_is_reported_before_any_installation(self):
+        path = self.home / ".claude/agents/scout.md"
+        path.parent.mkdir(parents=True)
+        path.write_text("user prompt without frontmatter\n")
+        result = self.install("all")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(str(path), result.stderr)
+        self.assertFalse((self.home / ".pi").exists())
+        self.assertFalse((self.home / ".claude/skills").exists())
+        self.assertEqual(path.read_text(), "user prompt without frontmatter\n")
+
+    def test_project_model_is_applied_only_to_new_agents(self):
+        config = self.project / "docs/agents/execution-mode.md"
+        config.parent.mkdir(parents=True)
+        config.write_text("# Execution mode: subagent\n\n**基础模型**: user/project-model\n")
+        before = config.read_bytes()
+        result = self.install("pi", "--project-root", str(self.project))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path in (self.home / ".pi/agent/agents").glob("*.md"):
+            self.assertIn("\nmodel: user/project-model\n", path.read_text())
+        self.assertEqual(config.read_bytes(), before)
+
+    def test_source_checkout_is_never_moved_or_replaced(self):
+        original = self.bundle
+        for target, location in (("pi", ".pi/agent/skills/dev-flow-skills"),
+                                 ("codex", ".agents/skills"),
+                                 ("codex", ".codex/skills"),
+                                 ("codex", ".codex/skills/dev-flow-skills")):
+            with self.subTest(location=location):
+                self.home = self.root / location.replace("/", "-")
+                self.bundle = self.home / location
+                shutil.copytree(original, self.bundle)
+                before = (self.bundle / "to-plan/SKILL.md").read_bytes()
+                result = self.install(target)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("独立目录", result.stderr)
+                self.assertEqual((self.bundle / "to-plan/SKILL.md").read_bytes(), before)
+                self.assertFalse((self.home / ".local").exists())
+
+    def test_linked_parent_directory_is_not_modified(self):
+        managed = self.root / "managed skills"
+        (managed / "to-plan").mkdir(parents=True)
+        original = managed / "to-plan/SKILL.md"
+        original.write_text("managed skill\n")
+        path = self.home / ".claude/skills"
+        path.parent.mkdir(parents=True)
+        path.symlink_to(managed, target_is_directory=True)
+        result = self.install("all")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(str(path), result.stderr)
+        self.assertEqual(original.read_text(), "managed skill\n")
+        self.assertFalse((self.home / ".pi").exists())
+        self.assertFalse((self.home / ".local").exists())
+
+    def test_linked_backup_directory_is_rejected_before_installation(self):
+        backup_directory = self.home / ".local/share/dev-flow-skills/backups"
+        backup_directory.parent.mkdir(parents=True)
+        backup_directory.symlink_to(self.bundle, target_is_directory=True)
+        before = set(self.bundle.iterdir())
+        old = self.home / ".claude/skills/to-plan/SKILL.md"
+        old.parent.mkdir(parents=True)
+        old.write_text("previous skill\n")
+        result = self.install("all")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(str(backup_directory), result.stderr)
+        self.assertEqual(old.read_text(), "previous skill\n")
+        self.assertEqual(set(self.bundle.iterdir()), before)
+        self.assertFalse((self.home / ".pi").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

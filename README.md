@@ -4,6 +4,46 @@
 
 > **全局纪律：绝不主动提交或推送代码。** 未经用户明确指示（"提交"/"推送"），任何阶段、任何 agent（主会话或子 agent）都把改动留在工作区。提交永远经过用户确认（人工 checkpoint）。
 
+## 安装与更新
+
+需要 Bash 和 Python 3.9+。将仓库放在长期保留的独立目录中，再选择目标 CLI：
+
+```bash
+git clone https://github.com/ALittleTurtleWhoCannotKnock/xixiwu_skills.git
+cd xixiwu_skills
+./install.sh all
+
+# 也可以只安装一个 CLI
+./install.sh pi
+./install.sh claude-code
+./install.sh codex
+
+# 先预览；不会修改安装目录
+./install.sh all --dry-run
+```
+
+同一个入口用于首次安装和后续更新。更新时，在原始仓库目录中执行：
+
+```bash
+git pull --ff-only && ./install.sh all
+```
+
+安装器把各技能和 `_agents/` 链接到这份仓库；Pi / Claude Code 的 agent 文件由适配器生成。保留仓库的位置，以免软链接失效；源仓库放在技能扫描目录里时，先移到独立目录。
+
+| 目标 | 技能与共享文件 | 生成的 agent |
+|------|----------------|--------------|
+| `pi` | `~/.pi/agent/skills/` | `~/.pi/agent/agents/` |
+| `claude-code` | `~/.claude/skills/` | `~/.claude/agents/` |
+| `codex` | `~/.agents/skills/` | 分派时读取共享 prompt |
+
+Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方说明](https://learn.chatgpt.com/docs/build-skills)和 [Claude Code 官方说明](https://code.claude.com/docs/en/skills#choose-where-skills-load)。Pi 的技能发现规则见 [Pi 官方说明](https://pi.dev/docs/latest/skills)。
+
+更新时，已有 agent 的 YAML frontmatter（模型、工具列表及其他自定义字段）原样保留，仅更新正文；新 agent 默认不绑定模型。在目标项目运行 `/init-dev-flow`，由用户选择基础模型，或安装时用 `--project-root /path/to/project` 为新 Pi agent 读取该项目已有的选择。已有 agent 的配置优先保留，项目的 tracker、执行模式与模型文件不由安装器改写。
+
+同名旧目录、旧软链接和待更新的 agent 会先迁到 `~/.local/share/dev-flow-skills/backups/<时间戳>/`，保留原目录结构；备份位于技能扫描目录之外。旧的整包技能副本及 Codex 旧目录 `~/.codex/skills/` 中的同名项也会迁出，避免继续加载旧版本；其他技能和 CC Switch 的源文件保留。需要恢复时，用备份中的原路径替换对应安装项。重复运行且内容未变时不产生备份。
+
+可用 `--home /tmp/dev-flow-home` 指定另一套用户目录进行隔离验证。安装完成后重新打开 CLI 会话；使用 CC Switch 等管理器时，将这份仓库作为后续来源，避免再次同步旧副本。
+
 ## 主流程
 
 ```
@@ -89,7 +129,7 @@ adapters/               # 工具适配（thinking / 工具白名单）
 - **进度查询**：`/find` 只读聚合状态，不修改任何状态；scout 只负责复杂目录发现，状态判断由主会话完成
 - **交互型留主会话**：grill / diagnosing / spec / tickets 需要与你来回对话，不适合隔离
 
-**生成/更新 agent 文件：**
+**单独生成 agent 文件（底层适配器）：** 常规安装与更新使用根目录的 `install.sh`，以保留已有 agent 配置。`build.sh` 按模板完整生成文件：
 ```bash
 ./adapters/build.sh all --project-root /path/to/project
 
@@ -113,21 +153,14 @@ Pi 构建时的优先级为 `DEV_FLOW_MODEL` 临时覆盖 > 目标项目的“�
 
 ## 打包给其他团队/仓库使用
 
-dev-flow-skills 是自包含的，模板与具体模型配置分开：
+分发完整仓库或压缩包，接收方放在长期保留的独立目录，再使用相同安装入口：
 
 ```bash
-# 1. 复制整个文件夹到目标位置
-cp -r dev-flow-skills /path/to/target/
-
-# 2. 在目标仓库运行 /init-dev-flow
-#    配置 tracker、提交策略、执行模式，并引导选择基础模型
-
-# 3. 生成 agent 文件
-cd /path/to/target/dev-flow-skills
-./adapters/build.sh all --project-root /path/to/target
+cd /path/to/xixiwu_skills
+./install.sh all
 ```
 
-使用者接入时完成自己的模型选择；分发模板时无需预填模型名或供应商配置。
+使用者在自己的项目运行 `/init-dev-flow` 完成 tracker、提交策略、执行模式及基础模型选择；分发模板时无需预填模型名或供应商配置。ZIP 用户更新时，将完整新版仓库放到相同位置后重跑 `install.sh`。
 
 ## 图示（功能流程图 / 架构图 / 时序图 / 泳道图）
 
@@ -148,7 +181,7 @@ cd /path/to/target/dev-flow-skills
 
 ## 使用方式
 
-1. 将本文件夹复制到 agent 工具的 skills 目录
+1. 运行 `./install.sh <pi|claude-code|codex|all>` 安装技能与适配文件
 2. **新仓库先运行 `/init-dev-flow`**，确定 tracker 类型、提交策略、执行模式
 3. 主流程按阶段顺序使用 `/命令` 触发；执行型阶段按 execution-mode 派子 agent 或主会话执行
 4. 遇到难调 bug 时使用 `/diagnosing-bugs`
@@ -159,6 +192,7 @@ cd /path/to/target/dev-flow-skills
 ```
 dev-flow-skills/
 ├── README.md
+├── install.sh                # 统一安装和更新入口
 ├── TUTORIAL.md               # 端到端叙事走查
 ├── architecture.md           # 自身架构示例（mermaid）
 ├── _agents/                  # 执行型子 agent 的 prompt 源
@@ -172,6 +206,7 @@ dev-flow-skills/
 │   └── scout.prompt.md
 ├── adapters/                 # 跨工具适配
 │   ├── build.sh
+│   ├── install.py            # 安装、备份与 agent 配置保留
 │   └── codex/README.md
 ├── tests/                    # 适配脚本检查与流程场景
 ├── init-dev-flow/
@@ -205,8 +240,8 @@ dev-flow-skills/
 ## 验证
 
 ```bash
-bash -n adapters/build.sh
+bash -n install.sh adapters/build.sh
 python3 -B -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-自动测试使用临时目录验证目标参数、用户模型配置与覆盖优先级、未配置时无内置模型、工作目录独立性和生成提示词保真，不写用户级 agent 目录。技能决策的行为走查见 [`tests/workflow-scenarios.md`](./tests/workflow-scenarios.md)，不以关键词检查代替实际执行。
+自动测试使用临时目录与临时 HOME 验证生成与安装：目标参数、模型优先级、首次安装、重复更新、旧副本迁移、备份、配置保留、预览及源仓库保护，不写真实用户级目录。技能决策的行为走查见 [`tests/workflow-scenarios.md`](./tests/workflow-scenarios.md)，不以关键词检查代替实际执行。

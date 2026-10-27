@@ -6,6 +6,12 @@
 
 ---
 
+## 安装与更新
+
+在独立目录中克隆或解压完整仓库，执行 `./install.sh all`，也可以把 `all` 换成 `pi`、`claude-code` 或 `codex`。用 `--dry-run` 预览安装项；Git 用户后续在原始仓库执行 `git pull --ff-only && ./install.sh all` 更新。安装位置、备份与旧副本迁移规则见 [README](./README.md#安装与更新)。
+
+技能和共享 prompt 链接到同一份仓库，已有 agent 的模型及其他 frontmatter 配置保留。安装后，在自己的项目运行 `/init-dev-flow` 完成基础模型等配置；安装器不代替这一步。
+
 ## 一页总览
 
 ```
