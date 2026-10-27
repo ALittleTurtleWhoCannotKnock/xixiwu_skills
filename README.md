@@ -92,6 +92,33 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 
 **Tracker 产物：** 本地分别保存 Spec、`plan.md` 和 ticket 文件；GitHub/GitLab 分别使用 Spec issue、独立 Plan issue 和 ticket issues。Plan 正文保存现行技术方案，关联 Spec 与 tickets，评论记录讨论和批准依据；amend 更新同一 Plan issue，不新建 plan-vN。字段与关联规则见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md#tracker-产物与-plan-引用)。
 
+## 层级与进度入口
+
+默认归属为 **Spec → Plan → Tickets**；已有 Epic 时在 Spec 上方关联它。`Parent:` 说明直接归属，`Spec:` 定位规格版本，`Plan:` 定位 P<N>，`Blocked by:` 单独说明执行依赖。版本续接的旧 ticket 保留为历史，不作为新 ticket 的归属父级。
+
+| 模式 | 层级与列表 |
+|------|------------|
+| GitHub | 建立原生 parent/sub-issue 关系；标题与类型标签区分 Spec / Plan / Ticket；已配置的 Projects 表格可打开 View → Show hierarchy |
+| 本地 Markdown | `.scratch/README.md` 列出 feature 入口；每个 feature 的 `INDEX.md` 提供当前规格、现行 Plan、ticket 层级链接与演进记录；`/find` 读取源文件展示带状态的树形快照 |
+| GitLab | 保留相同逻辑字段，按实际平台能力同步原生关系；不支持的展示如实说明 |
+
+本地继续保持每票一个文件，文件夹里即可找到导航：
+
+```text
+.scratch/
+├── README.md                 # feature 入口清单
+└── export/
+    ├── INDEX.md              # 当前规格、Plan 与 ticket 的可点击层级
+    ├── spec.md               # 历史规格保留
+    ├── spec-v2.md            # 当前规格（由 INDEX 指向）
+    ├── plan.md               # 原地更新，不叠版本
+    └── issues/
+        ├── 01-csv.md         # Spec v1 的历史票
+        └── 04-json.md        # Spec v2 的当前票
+```
+
+INDEX 只维护导航、当前版本与演进，不复制方案正文、ticket 状态或批准记录。创建/更新产物时同步关联；只读 `/find` 发现缺失、冲突或失效链接时报告，不代改。Projects 是可选入口，父子进度不代表 Plan 已批准或业务已验收。细则见[归属层级与列表展示](./_agents/workflow-contract.md#归属层级与列表展示)。
+
 ## 执行型子 agent
 
 执行型技能可分派给独立子 agent 执行（输入明确 → 跑完 → 写文件 → 报告，无需中途人机交互）。

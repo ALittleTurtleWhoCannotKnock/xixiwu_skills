@@ -145,7 +145,12 @@ sequenceDiagram
 
 读取 `docs/agents/issue-tracker.md` 判断 tracker 模式；若该文件缺失，提示先运行 `/init-dev-flow`。spec 的存放路径与格式遵循该文件的约定（本地模式为 `.scratch/<feature-slug>/spec.md`，feature-slug 从需求提取 kebab-case；GitHub/GitLab 模式用对应 CLI 创建 issue）。
 
-远程模式在后续 `/to-plan` 创建独立 Plan issue 后，在 Spec issue 正文记录 `Plan:` 引用；spec 和 plan 各自维护正文，不把现行技术方案放在 spec 评论中。
+按[归属层级与列表约定](../_agents/workflow-contract.md#归属层级与列表展示)在 Spec 头部写 `Parent:`：已有明确 Epic 则引用它，否则写 `none`，四段式正文保持不变。
+
+- 本地：同时创建/更新 feature 的 `INDEX.md`，登记当前规格和已有产物链接，并在 `.scratch/README.md` 登记 feature 入口；只链接已存在的文件，不为尚未生成的 Plan 建占位文件。
+- GitHub：采用 `[Spec]` 标题和项目类型标签；已指定 Epic 时建立原生父子关系并核对，按 tracker 中已配置的 Project 同步展示，失败项如实报告。
+
+后续 `/to-plan` 生成方案后，将 `Plan:` 引用回填 Spec；本地仅更新当前规格及索引，保留冻结的历史规格，远程各自维护正文，不把现行技术方案放在 Spec 评论中。
 
 ### Step 5: 用户确认
 

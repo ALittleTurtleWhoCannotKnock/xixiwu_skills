@@ -96,7 +96,7 @@ description: 将已批准的 plan 或已确认的单票小改动拆成可独立�
 
 ### Step 3: 声明依赖关系
 
-使用共享约定中的最小 ticket 模板，分别填写 `Spec:` 与 `Plan:`。依赖统一写 `Blocked by:`，没有依赖写 `none`；不要用“来源”同时表达 spec 版本与 plan 包。
+使用共享约定中的最小 ticket 模板，分别填写 `Parent:`、`Spec:` 与 `Plan:`。直接父级是 Plan 文件/issue，不带 P<N>；省略 Plan 时按共享规则归属 Spec、已指定 Epic 或 none，不补造被省略的文档。依赖统一写 `Blocked by:`，没有依赖写 `none`；不能把 blocker 当作父级。
 
 按[共享验证规则](../_agents/workflow-contract.md#验证方式与测试组织)填写“验证方式”：优先指定已有测试文件/fixtures 或适用检查命令，说明本票缺少的覆盖。不要预设每票新增一个 test 文件；只有独立测试边界或项目约定确有需要时才新建。文档、配置、纯重构可使用对应检查，不为凑红—绿循环制造测试。
 
@@ -115,11 +115,17 @@ description: 将已批准的 plan 或已确认的单票小改动拆成可独立�
 
 读取 `docs/agents/issue-tracker.md` 判断 tracker 模式；若该文件缺失，提示先运行 `/init-dev-flow`。ticket 的存放路径与格式遵循该文件的约定。
 
+保存前读取 Plan 的关联清单及现有票，按 **Spec 版本 + Plan/P<N> + 已确认的执行范围与验收** 识别对应票；重复调用复用已经保存的票，仅创建尚缺的切片。一个 P<N> 允许多票，不能因同包已有一票就跳过其他切片，也不能把旧 Spec 的历史票当成本次新票或重新打开旧票。
+
 **状态字段约定：** 每张 ticket 都必须有 `Status:`，新票初始为 `ready`。合法值与依赖语义以 tracker 声明为准，不在本技能硬编码三态；各默认状态含义见共享执行约定。
 
 **本地模式补充规则：** 每张 ticket 一个文件 `.scratch/<feature-slug>/issues/<NN>-<slug>.md`，从 `01` 编号（blocker 在前），头部字段遵循共享约定。**绝不合并成单一文件**。GitHub/GitLab 模式每张 ticket 一个 issue，使用相同字段和 tracker 声明的状态语义；若使用平台 blocking 关系，须与 `Blocked by:` 一致，工具不支持时用正文字段声明并如实报告未同步原生关系。
 
-远程票创建后，将其引用回填独立 Plan issue 的关联 tickets 清单；不将 ticket 或 plan 正文追加到 Spec 评论里。
+保存后按[归属层级与列表约定](../_agents/workflow-contract.md#归属层级与列表展示)同步导航：
+
+- 本地：把真实 ticket 链接及所属 P<N>/Spec 版本登记到 `INDEX.md` 的层级清单，回填 Plan 的关联 tickets；即使省略 Spec/Plan，也创建仅含现有产物的 feature 索引和 `.scratch/README.md` 入口。不把 Status 或批准状态复制进索引。
+- GitHub：每票使用 `[Ticket]` 标题与对应类型标签，建立 ticket → Plan（或明确的替代父级）的原生关系并核对；已有同父关系直接复用，冲突或同步失败列为未同步项。目标 Project 已配置时加入同一 Project，不因缺少 Projects 而建第二套 tracker。
+- 远程票创建后回填 Plan 正文的关联清单；不将 ticket 或 plan 正文追加到 Spec 评论里。
 
 ## 产出物
 

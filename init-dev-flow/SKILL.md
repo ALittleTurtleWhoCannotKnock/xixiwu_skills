@@ -69,7 +69,7 @@ description: 初始化仓库的开发流程配置。由 agent 自动探测 track
 
 #### 3a. 写 `docs/agents/issue-tracker.md`（单一事实源）
 
-读取 [共享执行约定](../_agents/workflow-contract.md)。下列本地/GitHub/GitLab 模板均补入同一段状态与字段声明：
+读取 [共享执行约定](../_agents/workflow-contract.md)。下列本地/GitHub/GitLab 模板均补入同一段状态与字段声明，以及该模式适用的归属与列表约定：
 
 ```markdown
 ## Ticket conventions
@@ -78,7 +78,7 @@ description: 初始化仓库的开发流程配置。由 agent 自动探测 track
 - ready = 待执行；claimed = 执行中或必要自动检查未通过
 - code-complete = 代码与必要自动检查通过，仍待最终验收/收尾 checkpoint；可解除 ticket 依赖，外部验证条件另验
 - resolved = 所有必需验收通过且收尾 checkpoint 已处理；parked = 搁置，不解除依赖
-- 每票使用 Status:、Spec:、Plan:、Blocked by:；spec 版本与 plan 包分别记录，无依赖写 none
+- 每票使用 Status:、Parent:、Spec:、Plan:、Blocked by:；直接归属、spec 版本、plan 包和执行依赖分别记录
 - 小改动省略 spec/plan 时写 none (原因)，必要决策和测试边界记录在 ticket 中
 - Git 提交与验收状态分别记录；未获用户明确授权不得提交/推送
 ```
@@ -99,6 +99,10 @@ Issues and specs for this repo live as markdown files in `.scratch/`.
 - One feature per directory: `.scratch/<feature-slug>/`
 - The spec is `.scratch/<feature-slug>/spec.md`
 - The implementation plan (when produced) is `.scratch/<feature-slug>/plan.md`
+- `.scratch/<feature-slug>/INDEX.md` is the feature navigation entry: current Spec, Plan, linked ticket hierarchy, and version history; create it when the first Spec or ticket is saved
+- Keep `.scratch/README.md` linked to each feature INDEX; preserve existing explanations and history
+- Use Parent: for direct ownership (Spec → Plan → Tickets; existing Epic optional); file references in metadata are relative to the feature directory
+- INDEX links point to real files and do not duplicate ticket statuses or approval state; `/find` reads those from the source files
 - Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, never a single combined tickets file
 - Every ticket follows the fields and states declared in Ticket conventions below
 - API contracts produced by `/to-api-contract` live at `.scratch/<feature-slug>/contracts/<ticket-slug>.md`
@@ -127,10 +131,19 @@ Issues and specs for this repo live in GitHub Issues on the connected remote. Us
 
 - Spec、Plan、Ticket 分别使用独立 issue；Plan issue 正文是现行技术方案，评论只记录讨论、批准依据和变更原因
 - Spec 正文用 Plan: 引用 Plan issue；Plan 正文用 Spec: 指向当前执行版 Spec，列出关联 tickets
+- Parent: 记录直接归属，并同步原生 Spec → Plan → Tickets；已有 Epic 时作为 Spec 父级，不额外强制建单
+- 沿用项目类型标签，未约定时用 spec / plan / ticket，并采用 [Spec] / [Plan] / [Ticket] 标题前缀；标签或原生关系失败时如实报告，不重复创建 issue
+- 先探测当前 CLI 的层级能力，必要时用 gh api；父级冲突不强制替换，规格版本迁移按共享约定核对
 - Ticket 分别填写 Spec: 和 Plan:，后者格式为 <Plan issue 引用> / P<N>
 - Plan 正文记录待 review / 已批准状态；open/closed 不是批准状态
 - amend 更新同一 Plan issue 正文及 Spec: 引用，不创建 plan-vN；Spec 版本定位沿用团队 tracker 约定
 - 远程 issue 是主存，不额外维护本地 plan.md 副本
+
+## Optional Project
+
+Project: none
+
+用户已提供 Project 时记录其 URL/ID，并将本次产物加入其中；未指定时沿用 none。Projects 表格可打开 View → Show hierarchy，显示 Parent issue / Sub-issue progress；普通 Issues 页用于分类和筛选。
 
 ## When a skill says "publish to the issue tracker"
 
@@ -141,7 +154,7 @@ Create a GitHub issue with `gh issue create`.
 Use `gh issue view <number>`.
 ```
 
-**GitLab 模式：** 同 GitHub，替换为 `glab` CLI。
+**GitLab 模式：** 沿用独立产物、正文字段与状态约定，使用 `glab`。原生层级和展示按该平台实际能力处理，不复制 GitHub API、CLI 参数或 Projects 配置。
 
 #### 3b. 本地模式额外：写 `.scratch/README.md`
 
@@ -151,6 +164,10 @@ Use `gh issue view <number>`.
 本目录是仓库的本地 issue tracker：specs 与 tickets 以 markdown 形式存放，**随仓库提交、团队共享**。
 
 约定见 `docs/agents/issue-tracker.md`。
+
+## Features
+
+创建 feature 后在此登记到 `<feature>/INDEX.md` 的链接；旧 feature 尚无索引时链接其目录。
 ```
 
 （如果 `.scratch/` 已存在，保留现有内容，只补 README。）

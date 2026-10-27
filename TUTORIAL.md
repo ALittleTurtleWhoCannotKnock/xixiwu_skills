@@ -154,6 +154,8 @@ Agent 先读 `docs/agents/issue-tracker.md` 判断 tracker 模式，然后：
    - 本地 → `.scratch/<feature-slug>/spec.md`
    - GitHub/GitLab → 创建 issue
 
+已有 Epic 时把 Spec 归属该总单，否则 Spec 为功能入口。本地从这一步维护 `INDEX.md` 和 `.scratch/README.md` 的导航；GitHub 使用原生父子关系与类型标签。
+
 **这是交互型技能，留在主会话。**
 
 ### 产出
@@ -181,6 +183,8 @@ Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`
 
 远程 Plan issue 正文用 `Spec:` 关联当前执行版，Spec 正文用 `Plan:` 反向引用；拆票后 Plan 列出关联 tickets。评论记录讨论和批准依据，open/closed 不代替批准状态。草案先保存为待 review，批准后更新同一正文，不把现行 plan 放进 Spec 评论或另存本地副本。
 
+Plan 的 `Parent:` 指向 Spec：本地更新同一 INDEX 的方案链接，GitHub 建立原生子 issue 并核对。tracker 已指定 Project 时加入同一个 Project，可用 View → Show hierarchy 查看层级；没有 Project 仍可继续普通 Issues 流程。
+
 ---
 
 ## 阶段 3：拆 ticket — `/to-tickets`
@@ -199,12 +203,14 @@ Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`
 Agent 会：
 1. **识别 prefactoring 机会** — 在写新功能前，先重构让变更更容易（"Make the change easy, then make the easy change"）
 2. 按 plan 包拆成 **tracer-bullet 垂直切片**（每片端到端可独立验证）
-3. 使用 `Spec:` / `Plan:` 分别引用 spec 版本和 plan 包，依赖统一写 `Blocked by:`
+3. 使用 `Parent:` 记录直接归属、`Spec:` / `Plan:` 分别引用 spec 版本和 plan 包，依赖统一写 `Blocked by:`
 4. 向你确认粒度和依赖，然后按 tracker 模式存放：
    - 本地 → `.scratch/<feature-slug>/issues/<NN>-<slug>.md`（从 01 编号，blocker 在前，绝不合并成单文件）
    - GitHub/GitLab → 每张 ticket 一个 issue
 
 远程票分别写 `Spec: <Spec 版本引用>`、`Plan: <独立 Plan issue> / P<N>`，创建后回填 Plan 的关联清单。本地文件引用格式继续使用 `plan.md#P<N>`。
+
+ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把实际文件链接补入 INDEX；GitHub 同步原生子 issue、类型标签及已配置的 Project。工具不支持、权限不足或父级冲突会报告未同步项，不通过重建 issue 绕过。
 
 **这是交互型技能，留在主会话。**
 
@@ -212,6 +218,7 @@ Agent 会：
 
 ```
 .scratch/blog-comments/
+├── INDEX.md                 # 当前规格、Plan 与 ticket 层级导航
 ├── spec.md
 ├── plan.md
 └── issues/
@@ -313,6 +320,8 @@ Agent 会：
 **已实现 spec 有变动时使用，不重走全流程。**
 
 只 grill 变动部分 → 判断增量或重做 → 保存增量 Spec、更新当前版本引用 → 更新同一 plan 正文 → 续接 ticket。旧 Spec 冻结；本地用版本文件与 INDEX，远程沿用 tracker 的 Spec 版本约定并同步 Plan issue 的 `Spec:`，不新建 Plan issue。业务路径变化时更新功能流程图，模块影响保留文字说明。
+
+同步更新 Plan 的 `Parent:` 和导航，旧票保留原版本与状态。GitHub 新版 Spec 另建 issue 时，只在核实同 feature 的旧父级后迁移同一个 Plan；本地 INDEX 保留历史链接并追加新票。`/find` 只读展示这棵树，状态仍从源文件/issue 读取。
 
 ### `/export-session` — 导出会话
 

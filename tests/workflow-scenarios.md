@@ -48,6 +48,20 @@
 
 再提供同一 feature 的增量 Spec 与已有 Plan 引用，执行方案更新与拆票走查：复用同一 Plan issue，ticket 用 Spec 版本及 Plan issue/P<N> 分别关联，Plan 回填 tickets；Spec 版本保存方式沿用 tracker 的既有约定。使用 `/find` 核对远程引用和批准状态，不要求本地 `.scratch` 存在。
 
+## GitHub 原生归属与列表展示
+
+使用模拟 GitHub tracker，提供旧版 CLI（无 parent 参数，但可用 gh api）、Spec/Epic、已确认的方案与票据粒度。模拟 issue number 与数值 id 必须不同，记录实际读写请求。只允许操作模拟数据，不访问真实 GitHub。
+
+执行 `/to-plan`、`/to-tickets` 后核对实际 parent/sub-issues 图、正文 Parent/Spec/Plan、类型标签及独立正文；重复调用不重复建单或重复挂载。分别测试目标 Project 已提供和未提供；没有 Project 不创建它或本地第二套 tracker。再提供已有其他父级、权限失败与只读 `/find` 请求，核对不强制改父级、不把错误当作无父级、不伪报已同步，查询不发写请求。
+
+使用另建 Spec v2 issue 的同 feature 变更执行 `/amend`，核对仅在旧父级等于先前 Spec 且版本证据一致时迁移同一个 Plan；新票仍挂 Plan，旧票的版本和状态不重写。父级与当前版本并发变化时报告冲突，不覆盖。
+
+## 无 GitHub 的本地层级
+
+准备没有 remote 的临时项目、本地 tracker、inline 模式和已确认的小功能。执行 `/to-spec`、`/to-plan`、`/to-tickets`，检查 `.scratch/README.md` 入口与 feature INDEX 的链接可实际定位到文件，Parent 字段与树一致，仍为每票一个平铺文件。首次保存 Spec 时就有索引，不等待 amend；单票小改动省略 Spec/Plan 时也能只登记真实 ticket，不补造文档。
+
+在同一 feature 已有 v1、旧票和 Plan 时执行 `/amend`。核对旧文件保留，新 Spec 为当前入口，Plan 就地更新，新票续接编号；INDEX 保留版本与历史票链接但不复制 Status 或批准状态。随后只修改源 ticket 的 Status，执行 `/find` 应读取新状态、区分历史/当前执行层，并输出可点击的层级；索引缺失或失效时只报告，文件内容和状态保持不变。
+
 ## 测试复用与替代验证
 
 准备四个隔离项目，均使用 inline 和默认五态。不给执行者额外的“不能新建测试文件”提示，检查技能自身是否能选择合适方法：

@@ -42,6 +42,7 @@ description: 在 spec 与 tickets 之间产出实施蓝图，本地保存 plan.m
 ```markdown
 # <Feature> 实施蓝图
 
+Parent: <当前 Spec 文件或 issue 引用>
 Spec: <当前 Spec 文件或远程版本引用>
 **状态**: 待 review
 
@@ -89,8 +90,9 @@ Spec: <当前 Spec 文件或远程版本引用>
 
 先保存一份可 review 的草案，再展示给用户：
 
-- 本地：写入 `.scratch/<feature-slug>/plan.md`。
+- 本地：写入 `.scratch/<feature-slug>/plan.md`；在当前 Spec 回填 `Plan: plan.md`，更新 `INDEX.md` 的当前规格与方案链接及 `.scratch/README.md` 的 feature 入口，保留历史规格和已登记 tickets。
 - GitHub/GitLab：使用 tracker 对应工具创建或更新**独立 Plan issue 的正文**，正文关联当前 Spec，并将返回的 Plan issue 引用写回 Spec 正文。已有仅存于评论中的 plan 时按共享约定迁移，保留历史证据。
+- 按[归属层级与列表约定](../_agents/workflow-contract.md#归属层级与列表展示)记录 `Parent:`。GitHub 将 Plan 设为 Spec 的原生子 issue，采用 `[Plan]` 标题和对应类型标签；重试先查询并复用现有关系。工具能力、权限或父级冲突导致未同步时明确报告，不把正文互链当作成功。
 - 正文标 `**状态**: 待 review`；已有针对当前方案的明确批准时可直接记录为已批准，不重复询问。未批准时保存草案并等待 review，不拆票。
 
 展示文件/issue 的可访问引用及以下要点：
@@ -105,9 +107,9 @@ review 说明只突出影响批准的事项，引用对应条目；不在正文�
 
 ### Step 5: 保存并交接
 
-- 更新同一本地 plan 或同一 Plan issue 正文，保留 `Spec:` 与关联关系；正文记录 `**状态**: 已批准（<日期>）` 及批准依据。
+- 更新同一本地 plan 或同一 Plan issue 正文，保留 `Parent:`、`Spec:` 与关联关系；正文记录 `**状态**: 已批准（<日期>）` 及批准依据。本地 INDEX 仅维护导航，不复制批准戳记。
 - 将 plan 的文件/issue 引用交给 `/to-tickets`、`/implement` 与 `/find`，不能只给 Spec issue 或某条讨论评论。
-- 拆票后把 ticket 引用回填 plan；`/amend` 就地维护同一正文，评论只承载讨论与变更记录。
+- 拆票后把 ticket 引用回填 plan，并更新本地 INDEX 或原生子 issue 清单；`/amend` 就地维护同一正文，评论只承载讨论与变更记录。
 
 ## plan 的内容边界
 

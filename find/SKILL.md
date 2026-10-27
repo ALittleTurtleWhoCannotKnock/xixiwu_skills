@@ -23,7 +23,7 @@ description: Use when you need a read-only progress snapshot of the current repo
 
 ### Step 2: 发现 feature（可选使用 scout）
 
-- 本地模式：传入 feature 时只检查 `.scratch/<feature>/`；未传时扫描其一级目录，排除 `README.md`、`architecture.md` 等非 feature 文件
+- 本地模式：优先从 `.scratch/README.md` 的 feature 链接定位 INDEX；传入 feature 时只检查该 feature，未传时兼容扫描一级目录中的 INDEX/spec/plan/issues。未登记的旧 feature 仍显示，不把纯 Epic 文档或其他说明目录当作 feature
 - 远程模式：从 tracker 声明的 feature/Spec 入口读取关联 Plan issue 和 tickets；按 `Spec:` / `Plan:` 建立关系，不要求本地 `.scratch` 存在，也不按 issue 编号、评论时间猜当前版本
 - 当 feature 结构复杂、需要定位 INDEX/spec/issues/contracts 文件时，可按 `docs/agents/execution-mode.md` 分派 `scout` 做**只读文件发现**；scout 只返回文件清单和路径，不判断状态
 - `scout` 不可用或 execution mode 为 inline 时，主会话直接扫描
@@ -34,20 +34,25 @@ description: Use when you need a read-only progress snapshot of the current repo
 
 1. `INDEX.md`（若存在）
    - 当前 spec 版本（INDEX 指向的版本即“当前执行层”）
-   - 演进摘要
+   - 演进摘要、导航层级与真实文件链接；与正文字段交叉核对，不从索引推断 ticket 状态或 Plan 批准
 2. spec 文件
    - `INDEX.md` 指向的版本优先
    - 没有 INDEX 时使用 `spec.md` 或最新 `spec-vN.md`
 3. `issues/*.md`
    - `Status:`（按 tracker 值域解析）
+   - `Parent:` 记录直接归属；缺失时仅按明确的 Plan/Spec 引用推导并注明，不改写原文件
    - `Spec:` 与 `Plan:` 分别确定来源版本和方案包；兼容旧 `**来源**:`，按内容区分，不用 plan 包推断 spec 版本
    - 依赖以 `Blocked by:` 为标准，读取时兼容 `**依赖**:`、`**阻塞**:`；重复字段冲突则列明字段和值，阻塞判定为 unknown
    - ticket 标题和编号
-4. `contracts/`
+4. 现行 plan 文件
+   - `Parent:`、`Spec:`、批准戳记与关联 tickets，核对当前规格和导航；明确省略 Plan 时不要求该文件
+5. `contracts/`
    - 已生成的契约文件名
-5. `.scratch/<feature>/` 下未建票的实质文档（如集成说明、走查单）——只登记，不判断状态
+6. `.scratch/<feature>/` 下未建票的实质文档（如集成说明、走查单）——只登记，不判断状态
 
 远程读取 Spec 及其版本引用、独立 Plan issue 正文（含 `Spec:`、批准状态与 tickets 清单）、各 ticket 正文和关联契约。按 tracker 的当前版本约定定位执行版，并与 Plan 的 `Spec:` 核对；不从 Plan 包号推断版本。只在 Spec 评论发现旧 plan 时报告其位置与迁移建议，不迁移；主存不可访问或版本关系冲突时报告具体缺失信息。
+
+GitHub 同时只读查询实际 parent/sub-issues，并与 `Parent:` / `Plan:` / `Spec:` 比较。旧 CLI 不支持字段时按共享约定使用可用 API；权限不足或查询失败标为 unknown，不把读取失败当成没有父级。GitLab 只使用该平台实际支持的关系。原生关系、正文字段和本地索引冲突时分别列出来源和值，不在 `/find` 中补标签、改父级或重建索引。
 
 **状态解析规则：**
 
@@ -66,7 +71,7 @@ description: Use when you need a read-only progress snapshot of the current repo
 | active | `ready` / `claimed` | 可执行 / 执行中 |
 | unknown | 值域外、缺失 | 状态不完整 |
 
-**父子层级语义**（amend 续接产生）：旧版本父类 ticket 被 spec-v(N+1) 的新 ticket 续接后，父类保持原有 `code-complete`/`parked` 等状态作为**追踪参考**（挂数据、挂历史），不因子 ticket 存在而升级；子 ticket（新版本派生）才是执行单元，按 tracker 声明流转。判断“下一步”时只在执行层（当前 spec 版本派生的 ticket）找 `ready`；父类停在 code-complete 是正常状态，不是遗漏。
+**版本续接语义**（不是 `Parent:` 归属）：旧 ticket 被 spec-v(N+1) 的新 ticket 续接后，旧票保持原有 `code-complete`/`parked` 等状态作为**追踪参考**，不因新票存在而升级。新票仍归属 Plan，或按明确省略规则确定父级。判断“下一步”时只在执行层（当前 spec 版本派生的 ticket）找 `ready`；旧追踪参考票停在 code-complete 是正常状态，不是遗漏。
 
 **依赖判定规则：**
 
@@ -98,7 +103,9 @@ description: Use when you need a read-only progress snapshot of the current repo
 
 ### Step 5: 输出快照
 
-进度统计按归类分组，不合并口径：
+先按共享约定输出 **Hierarchy**：用可点击的 Markdown 嵌套列表显示已有 Epic（若明确指定）→ Spec → Plan → tickets；本地节点链接真实文件，远程节点链接实际 issue。每个 ticket 标注 P<N>、Spec 版本与读取到的 Status；旧版本票标注“历史”，省略的层级不补造节点。P<N> 仅用于 Plan 下的分组，不当成额外 issue。原生关系不可读或与正文不符时，注明“正文推导/原生未同步”，不伪装为已验证的树。
+
+再输出下列状态摘要。进度统计按归类分组，不合并口径，当前执行层与历史票明确区分；GitHub 的子 issue 关闭比例不替代这些状态：
 
 ```text
 Feature: <feature>
@@ -132,6 +139,7 @@ Next:
 Warnings:
 - <missing INDEX / unknown Status / multiple claimed / tracker unavailable
    / plan 待 review 未批准 / code-complete 依赖未验证 / parked 未解除下游 / 外部依赖无法验证
+   / Parent 与原生关系冲突 / 索引缺失或链接失效 / 原生关系未同步
    / 发现未建票的实质文档（建议建票，如 backend-integration.md）>
 ```
 
@@ -150,7 +158,7 @@ grid-chain                      状态不完整   1/3 resolved + 1 unknown      
 - `/find` 是观察视图，不是状态管理器
 - 不能为了让进度看起来完整而修改 ticket、INDEX 或 spec
 - code-complete 与 resolved 不混算：统计、阶段判断、“下一步”都要区分
-- 父类追踪参考 ticket 停在 code-complete/parked 是正常状态，不提示为异常
+- 版本续接的旧追踪参考 ticket 停在 code-complete/parked 是正常状态，不把它当成归属父级
 - 不确定就显示 `unknown` 并列出原因
 - 没有唯一可执行 ticket 时，明确列出原因，不擅自选择
 - 发现实质文档未建票时只在 Warnings 建议建票，不代建

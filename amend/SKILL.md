@@ -77,6 +77,9 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 ```markdown
 # <Feature> Spec v(N+1)
 
+Parent: <沿用已确认的 Epic；没有则 none>
+Plan: <既有 Plan 文件/issue 引用；没有则 none>
+
 > 本版本是对 v(N) 的增量变更，只记录变动点。完整背景见 v(N)。
 
 ## 本次变动（v(N) → v(N+1)）
@@ -105,12 +108,17 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 
 ### Step 5: 更新当前版本引用（主会话）
 
-本地 `.scratch/<feature>/INDEX.md` 不存在则创建，存在则更新：
+本地 `.scratch/<feature>/INDEX.md` 不存在则创建，存在则更新当前版本与演进记录，并按[归属层级与列表约定](../_agents/workflow-contract.md#归属层级与列表展示)保留 Plan、tickets 层级链接；不把整个 INDEX 替换为仅有版本列表的文件：
 
 ```markdown
 # Feature: <feature>
 
-**当前版本**: spec-v(N+1).md（agent 实现一律读这个）
+**当前版本**: [spec-v(N+1).md](spec-v(N+1).md)（agent 实现一律读这个）
+
+Plan: [plan.md](plan.md)（仅已有 Plan 时保留此链接）
+
+## 层级
+[保留既有链接，标记当前规格及历史票版本；Step 6 保存新票后追加其真实链接，不重复保存状态]
 
 ## 演进
 - v1 (spec.md): [一句话概括]（[状态]）
@@ -131,6 +139,7 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 - 技术决策表：新增/修订本次变动涉及的决策行，理由栏注明"源于 v(N+1) [变动点]"
 - 包分解：受影响的 P 条目改写技术路径/风险点；**改动锚点随方法改名/重构同步更新**（锚点是定位事实源，腐化前主动修，别等 implementer 报错）；全新工作包续接编号（P(N+1)…）
 - 若只变产品边界而技术方案未变 → 技术正文沿用，仍将 plan 的 `Spec:` 引用更新到本次 Spec 版本
+- 新 Spec 继承已确认的 Epic；Plan 的 `Parent:` 同步当前规格。GitHub 若新版 Spec 另建 issue，按共享约定核对旧父级和同 feature 证据后迁移同一个 Plan；已有父级冲突则报告，不强制重挂，不移动历史 tickets
 - plan 头部加一行变更戳记：`> 更新：v(N+1) [日期] [一句话]`（保留演进线索，正文保持现行状态）
 
 新票的 `Plan:` 引用同一本地 plan 或同一 Plan issue 中的 P<N>。保留锚点生成阶段；本次方案已有明确授权时沿用，超出原批准范围的技术决策需先完成对应 review，再更新正文批准状态；评论只记录依据与讨论。
@@ -148,6 +157,8 @@ issues/
 ```
 
 新票分别记录本次 `Spec:` 版本与 `Plan:` 包引用；本地如 `spec-v(N+1).md` / `plan.md#P<N>`，远程如 `<Spec 版本引用>` / `<Plan issue> / P<N>`。不需要 plan 时写 `Plan: none (原因)` 并补齐决策；依赖用 `Blocked by:` 声明。
+
+新票的 `Parent:` 指向同一个 Plan（省略时按共享规则处理），不是被续接的旧 ticket。本地更新 INDEX 和 `.scratch/README.md` 导航，保留旧规格与旧票及其状态；GitHub 同步新 Spec、Plan、新 tickets 的原生归属及类型标签，Projects 仅使用已配置目标。历史 ticket 的版本、归属和状态不随当前规格切换而重写。
 
 ### Step 7: 实现（进入 /implement）
 

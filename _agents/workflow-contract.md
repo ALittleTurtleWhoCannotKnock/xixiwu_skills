@@ -26,6 +26,59 @@
 - amend 仍维护同一个 Plan issue：更新正文和当前 `Spec:` 引用，不新建 plan-vN。Spec 的版本存放继续遵循 tracker 的既有约定，不用 Plan issue 编号推断 Spec 版本。
 - 旧 plan 若仅在 Spec 评论中，继续维护时将当前有效内容迁到独立 Plan issue，保留原评论与批准证据，再更新本次涉及的引用；只读查询不执行迁移。
 
+## 归属层级与列表展示
+
+默认层级为 **Spec → Plan → Tickets**。已有明确的 Epic 时，在 Spec 上方关联该 Epic；不为补层级额外创建总单。`Parent:` 记录直接归属，`Spec:` 记录具体规格版本，`Plan:` 记录方案与 P<N>，`Blocked by:` 记录执行依赖，四者不互相代替。
+
+| 产物 | `Parent:` |
+|------|-----------|
+| Spec | 用户或 tracker 已指定的 Epic 引用；没有时写 `none` |
+| Plan | 当前 Spec 的文件/issue 引用 |
+| Ticket | Plan 的文件/issue 引用，不带 P<N>；明确省略 Plan 时用 Spec，二者均省略时用已指定 Epic 或 `none (单票小改动)` |
+
+旧产物缺少 `Parent:` 时，可从明确的 `Plan:` / `Spec:` 推导并标注“推导”；不能从编号、目录名或相似标题猜 Epic。写入本次涉及的产物时补齐归属，不批量改写历史票。版本续接是演进关系，旧 ticket 不是新 ticket 的归属父级。
+
+### 本地文件
+
+- 保留 `.scratch/<feature>/spec*.md`、同一 `plan.md` 和 `issues/<NN>-<slug>.md` 的平铺结构，不按层级搬动文件或为每个 P<N> 建目录。正文的 `Parent:` / `Spec:` / `Plan:` 路径统一相对 feature 目录。
+- 首次保存 Spec 或 ticket 时创建/更新 `.scratch/<feature>/INDEX.md`；保存 Plan、拆票和 amend 时同步本次关联。INDEX 保留当前规格入口、同一 Plan 的链接、按归属缩进的 ticket 链接及规格演进记录。P<N> 可以作为分组标注，不是额外父文档。
+- INDEX 中的 Markdown 链接相对 INDEX 所在目录，必须指向真实文件。尚未产生或明确省略的 Spec/Plan 写 `none (原因)`，不生成假文件或失效链接。历史规格与旧票保留并注明版本，不把所有挂在同一 Plan 下的票当作当前执行层。
+- INDEX 是导航和当前版本入口，不复制方案正文、ticket Status 或 Plan 批准状态；状态从原文件读取。写入前重读当前版本及有关引用，存在冲突时报告，不覆盖其他人的更新。
+- `.scratch/README.md` 维护 feature 到 `feature/INDEX.md` 的链接清单，保留其他说明。旧 feature 尚无 INDEX 时暂链接其目录；只读查询不代建索引。
+
+INDEX 示例（仅列已经存在的产物）：
+
+```markdown
+# Feature: export
+**当前版本**: [spec-v2.md](spec-v2.md)
+Plan: [plan.md](plan.md)
+
+## 层级
+- [Spec v2](spec-v2.md)（当前）
+  - [Plan](plan.md)
+    - [04 JSON 导出](issues/04-json.md) — P2 / Spec v2
+    - [01 CSV 导出](issues/01-csv.md) — P1 / Spec v1（历史）
+
+## 演进
+- [v1](spec.md)：CSV 导出
+- [v2](spec-v2.md)：增加 JSON 格式
+```
+
+### GitHub
+
+- 新建/更新本次产物时，按 `Parent:` 建立原生 parent/sub-issue 关系并读取核对；已是同一父级时复用，不重复创建 issue。正文引用仍保留，不能把 Markdown 互链称作已同步原生关系。
+- 优先沿用项目的类型标签；未约定时使用 `spec` / `plan` / `ticket`，Epic 仅在已有该产物时标注。标题分别用 `[Spec]` / `[Plan]` / `[Ticket]` 前缀，便于仓库 Issues 列表区分。缺少标签时可创建本次所需标签；权限不足则保留标题分类并报告未同步项，不为标签重建 issue。
+- 使用当前工具实际支持的层级接口。先分别检查 `gh issue create --help`、`gh issue edit --help` 和 `gh issue view --help`；旧版不支持相关参数时，用 `gh api` 或可用连接器访问 [Sub-issues API](https://docs.github.com/en/rest/issues/sub-issues)。API 的 `sub_issue_id` 是子 issue 的数值 **id**，不是列表中的 issue number；从实际查询结果取得。
+- 添加前读取子 issue 的父级和目标父 issue 的子列表；确认对象可访问且没有冲突再写入。认证失败、403 或来源不明的 404 不能当作“没有父级”。已有其他父级时不强制替换，报告期望与实际；仅 `/amend` 中经核对的同一 feature 规格版本迁移适用下节规则。写入失败后读取实际结果，报告未同步关系及原因，不无限重试或重复建单。
+- Projects 是可选展示入口。tracker 已配置或用户已指定目标 Project 时，把本次 issue 加入同一 Project；未指定时不创建 Project，不阻塞普通 Issues 流程。表格视图可打开 **View → Show hierarchy**，显示 Parent issue / Sub-issue progress；仓库 Issues 页保留分类与筛选入口，不承诺相同树形展示。参考 [GitHub 层级视图说明](https://github.blog/changelog/2026-03-19-hierarchy-view-in-github-projects-is-now-generally-available/)。
+- GitLab 沿用上述逻辑字段和既有平台约定，原生层级能力按当前工具与权限探测，不直接套用 GitHub API。平台不支持时保留正文关系并明确说明展示限制。
+
+### 规格演进与状态
+
+- amend 继续维护同一个 Plan。新 Spec 继承已确认的 Epic；Plan 的 `Spec:` 与 `Parent:` 更新到当前规格，已有 ticket 的版本和状态保持原样，新票归属同一个 Plan。
+- 远程规格仍在同一 issue 内演进时，Plan 的原生父级保持不变。版本另建 Spec issue 时，只有旧父级确为本次读取的上一 Spec、两版属于同一 feature 且本次变更已确认，才在写入前重读关系并将 Plan 移至新版 Spec；不重挂历史 tickets，不替换不明父级。发生并发变化或冲突时停止该关系写入并报告。
+- 父子数量、子 issue 关闭比例、目录层级都不代表 Plan 已批准或业务已验收；不据此自动关闭父 issue、升级状态或解除依赖。`/find` 从原始状态源生成带版本与状态的树形快照，原生关系、正文字段或 INDEX 不一致时明确列出，不在查询时修复。
+
 ## Ticket 字段
 
 每张 ticket 一个文件，最小格式：
@@ -33,6 +86,7 @@
 ```markdown
 ## Ticket 02: 评论数据模型与基础 API
 Status: ready
+Parent: plan.md
 Spec: spec.md
 Plan: plan.md#P2
 Blocked by: 01-prefactor
@@ -45,6 +99,7 @@ Blocked by: 01-prefactor
 - 创建和查询接口符合约定
 ```
 
+- `Parent:` 按上节记录直接归属；没有 Plan 时不强制补 Plan，也不把 blocker 写成父级。
 - `Spec:` 指向所属 spec 版本；本地路径相对 feature 目录，远程 tracker 可用 issue 引用。
 - `Plan:` 指向本地 plan 包或独立 Plan issue 中的包；与 spec 版本分别记录，不复用同一个来源字段。
 - `Blocked by:` 使用 ticket 编号/文件名/issue 引用，无依赖写 `none`；外部条件也必须明确列出。
