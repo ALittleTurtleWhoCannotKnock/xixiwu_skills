@@ -6,13 +6,13 @@ dev-flow-skills 的图示约定。**统一使用 mermaid 语法**：渲染友好
 
 **分两档复杂度：**
 - **架构图**：项目级模块地图（`.scratch/architecture.md`）——`flowchart` + 泳道 subgraph，看得人多、生成一次
-- **spec 内嵌图**：时序图（`sequenceDiagram`）/ 模块影响图（`flowchart`）——更新频繁，控制维护成本
+- **spec 内嵌图**：功能流程图（`flowchart`）表达业务路径，时序图（`sequenceDiagram`）表达跨参与者调用——更新频繁，控制维护成本
 
 ---
 
 ## 一、组件类型（7 类枚举，沿用 archify componentType）
 
-节点文本内以 `[type]` 前缀标注，承载语义（渲染与纯文本均可读）：
+架构节点与调用参与者可用 `[type]` 前缀承载类型语义；功能流程图使用业务动作与判断，不要求组件类型标记：
 
 | 标记 | 含义 |
 |------|------|
@@ -26,7 +26,7 @@ dev-flow-skills 的图示约定。**统一使用 mermaid 语法**：渲染友好
 
 ---
 
-## 二、时序图（sequenceDiagram）— spec 内嵌首选
+## 二、时序图（sequenceDiagram）— 跨参与者调用
 
 **用途：** feature 的端到端调用流，嵌入 spec 的"方案概述"。
 
@@ -109,22 +109,33 @@ flowchart TB
 
 ---
 
-## 四、模块影响图（feature 变更）— flowchart
+## 四、功能流程图（feature workflow）— flowchart
 
-**用途：** 嵌入 spec 的"模块影响"，标注本 feature 改了哪些模块（学 archify Delta 思想）。
+**用途：** 嵌入 spec 的“方案概述”，让读者看懂功能从入口到结果如何流转，包括关键判断、失败和退出路径。模块改动范围用文字清单记录。
 
 **模板：**
 
 ```mermaid
-flowchart LR
-    comment["[新增] comment-service"] -->|挂载| post["[修改] post-service"]
-    auth["[不动] auth-service"] -.复用.-> comment
+flowchart TD
+    start([开始]) --> input[用户填写评论]
+    input --> check{内容符合要求?}
+    check -->|否| invalid[提示修改内容]
+    invalid --> input
+    check -->|是| publish[发布评论]
+    publish --> result{发布成功?}
+    result -->|是| visible[显示新评论]
+    result -->|否| failed[显示失败原因]
+    failed --> retry{用户选择重试?}
+    retry -->|是| publish
+    retry -->|否| done([结束])
+    visible --> done
 ```
 
 **约束：**
-- 节点文本以 `[新增][修改][不动]` 前缀标记变更状态
-- 一条主线连接，复用/依赖用虚线 `-.标签.->`
-- 图下方列表补充每个模块的具体影响
+- 入口/结束使用圆角节点，业务动作用矩形，条件用菱形，分支箭头写明条件或用户选择
+- 用领域词典中的业务术语，不把模块名、接口路径、数据库或文件依赖作为流程主干
+- 只画已确认的分支；登录、校验、重试等按具体需求决定，不因模板示例而自动加入。未明确的路径标注待确认
+- 用户重试与自动重试分别表述，失败与取消有明确去向，不把业务循环画成无条件无限循环
 
 ---
 
@@ -156,9 +167,9 @@ sequenceDiagram
 ## 六、通用约定
 
 1. **语义 > 排版**：先保证结构正确、标签完整，再考虑对齐美观
-2. **标签必带语义**：关系标签写协议/动作/方向（`|HTTP|`、`(security) 校验`、`(return)`、`(async)`），不写无信息的 `连接`
-3. **单一主干**：任何图都先画一条清晰主线，分支/异常走 `alt`/`else` 或虚线旁路，不堆砌
-4. **复杂度分档**：架构图用 flowchart+subgraph（第三节），spec 内嵌图用 sequenceDiagram（第二节）
+2. **标签必带语义**：功能流程标业务条件与选择；调用关系标协议/动作/方向（`|HTTP|`、`(return)`、`(async)`），不写无信息的 `连接`
+3. **单一主干**：先画清晰主线；功能流程用条件节点与带标签的实线分支，时序分支用 `alt`/`else`，不堆砌
+4. **复杂度分档**：架构图用 flowchart+subgraph（第三节）；spec 功能流程用 flowchart（第四节），跨参与者调用用 sequenceDiagram（第二节）
 5. **代码块标注**：统一用 ```` ```mermaid ```` 围栏（渲染器识别）
 6. **进 git**：文本即源码，随 spec/ticket 提交，diff 可见演进
 

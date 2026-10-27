@@ -1,6 +1,6 @@
 ---
 name: to-spec
-description: 将对话/需求转化为结构化 spec 文档。四段式结构：问题陈述、非目标、方案概述、模块影响。包含 seams 分析确定测试边界。spec 只管产品意图与边界，技术决策留给 /to-plan。适用于需求已对齐，需要固化方案的场景。
+description: 将已对齐的需求转化为结构化 spec，包含功能流程图、调用时序图、测试边界与模块影响清单。四段式记录产品意图与边界，技术决策留给 /to-plan。适用于需要固化需求并交给规划的场景。
 ---
 
 # To Spec
@@ -39,6 +39,8 @@ description: 将对话/需求转化为结构化 spec 文档。四段式结构：
 
 ### Step 2: Seams 分析
 
+先按[共享验证规则](../_agents/workflow-contract.md#验证方式与测试组织)判断改动类型。以下 seams 分析针对行为测试；纯文档、配置、样式或重构在测试策略中说明适用检查，不强制新增运行时测试边界。
+
 确定测试边界（seams）。优先使用现有接缝，避免新增。**优先复用 scout 简报中 "Existing Seams" 列出的现有接缝。**
 
 **Seams 层级（从高到低）：**
@@ -55,7 +57,7 @@ description: 将对话/需求转化为结构化 spec 文档。四段式结构：
 **原则：**
 - 现有 seams 优先于新建 seams
 - 尽可能使用最高层 seam
-- 代码库中 seams 越少越好，理想是一个
+- 覆盖当前功能的主要外部行为；只为独立风险补充其他边界，不默认在每个内部层级重复测试
 
 **输出：** 向用户确认测试边界：
 ```
@@ -68,9 +70,9 @@ description: 将对话/需求转化为结构化 spec 文档。四段式结构：
 
 ### Step 3: 合成 spec 内容
 
-基于对齐结果和 seams 分析，合成四段式 spec。**图示部分用 Mermaid 表达**（参照 `_agents/diagram-guide.md`）：模块影响图用 `flowchart`，端到端调用流用 `sequenceDiagram`。用 ```` ```mermaid ```` 代码块包裹，GitHub/飞书可渲染。
+基于对齐结果和 seams 分析，合成四段式 spec。**图示部分用 Mermaid 表达**（参照 `_agents/diagram-guide.md`）：在方案概述中用 `flowchart` 画功能流程，说明用户从哪里进入、做什么、如何分支、得到什么结果；跨参与者调用继续用 `sequenceDiagram`。模块影响保留文字清单。用 ```` ```mermaid ```` 代码块包裹。
 
-```markdown
+````markdown
 ## 问题陈述
 
 [一段话描述要解决的问题，包含用户痛点和业务价值]
@@ -84,10 +86,31 @@ description: 将对话/需求转化为结构化 spec 文档。四段式结构：
 
 [高层方案描述，不涉及具体实现细节]
 
+### 功能流程图
+
+[使用业务动作、条件和结果画出已确认的功能路径，包含主流程和关键异常/退出分支。
+不把服务、数据库或文件的依赖关系当作功能流程。示例：]
+
+```mermaid
+flowchart TD
+    start([开始]) --> input[用户填写评论]
+    input --> check{内容符合要求?}
+    check -->|否| invalid[提示修改内容]
+    invalid --> input
+    check -->|是| publish[发布评论]
+    publish --> result{发布成功?}
+    result -->|是| visible[显示新评论]
+    result -->|否| failed[显示失败原因]
+    failed --> retry{用户选择重试?}
+    retry -->|是| publish
+    retry -->|否| done([结束])
+    visible --> done
+```
+
 ### 测试边界（Seams）
 
 - **主要 seam**: [层级和位置]
-- **测试策略**: [测试什么、不测试什么]
+- **测试策略**: [按改动类型说明验证方式、需要补充的行为覆盖与可复用的现有测试；不按验收项预设新测试文件]
 
 ### 关键决策
 
@@ -95,29 +118,7 @@ description: 将对话/需求转化为结构化 spec 文档。四段式结构：
 |-------|------|------|------|
 | [决策] | A/B/C | [选择] | [理由] |
 
-## 模块影响
-
-### 模块影响图（本 feature）
-
-[用 mermaid flowchart 画出本 feature 涉及模块的连接关系，
-用 [新增][修改][不动] 标记变更。示例：]
-
-```mermaid
-flowchart LR
-    NEW["[新增] comment-service"]
-    MOD["[修改] post-service"]
-    KEEP["[不动] auth-service"]
-    NEW -->|挂载路由| MOD
-    NEW -.->|复用| KEEP
-```
-
-### 受影响模块
-- [模块名]: [影响描述]
-
-### 不受影响模块（明确排除）
-- [模块名]: [为什么不受影响]
-
-## 端到端流程（时序图）
+### 端到端调用时序图
 
 [用 mermaid sequenceDiagram 画出本 feature 的端到端调用流。
 用 ->> 同步、-->> 返回、-) 异步。示例：]
@@ -130,11 +131,21 @@ sequenceDiagram
     backend->>database: 写入
     backend-->>frontend: 201 + json
 ```
-```
+
+## 模块影响
+
+### 受影响模块
+- [模块名]: [新增/修改及具体影响描述]
+
+### 不受影响模块（明确排除）
+- [模块名]: [为什么不受影响]
+````
 
 ### Step 4: 保存 spec
 
 读取 `docs/agents/issue-tracker.md` 判断 tracker 模式；若该文件缺失，提示先运行 `/init-dev-flow`。spec 的存放路径与格式遵循该文件的约定（本地模式为 `.scratch/<feature-slug>/spec.md`，feature-slug 从需求提取 kebab-case；GitHub/GitLab 模式用对应 CLI 创建 issue）。
+
+远程模式在后续 `/to-plan` 创建独立 Plan issue 后，在 Spec issue 正文记录 `Plan:` 引用；spec 和 plan 各自维护正文，不把现行技术方案放在 spec 评论中。
 
 ### Step 5: 用户确认
 
@@ -142,9 +153,9 @@ sequenceDiagram
 
 ## 产出物
 
-- 结构化 spec 文档（含 seams 分析）
+- 结构化 spec 文档（含功能流程图、seams 分析与端到端调用时序图）
 - 明确的模块边界和影响范围
 
 ## 下一步
 
-Spec 确认后，进入 `/to-plan` 阶段，产出实施蓝图（plan.md），把技术选型、实现路径、风险点在实现前拍死并审批，再由 `/to-tickets` 拆执行细节。
+Spec 确认后，进入 `/to-plan` 阶段，产出本地 plan.md 或独立 Plan issue，把技术选型、实现路径、风险点在实现前拍死并审批，再由 `/to-tickets` 拆执行细节。

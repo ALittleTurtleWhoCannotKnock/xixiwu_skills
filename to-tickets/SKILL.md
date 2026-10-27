@@ -1,6 +1,6 @@
 ---
 name: to-tickets
-description: 将 plan.md 的包分解拆分为 tracer-bullet tickets。每票是可独立验证的垂直切片，只写执行细节（seams/测试/验收标准），方案细节引用 plan 条目。包含 prefactoring 识别优化实施顺序。适用于 plan 已批准，需要拆分执行的场景。
+description: 将已批准的 plan 或已确认的单票小改动拆成可独立验证的 tracer-bullet tickets，明确测试边界、用例、验收与依赖。常规票引用 plan 方案；无 plan 的小改动在票内补齐必要决策。包含 prefactoring 识别。
 ---
 
 # To Tickets
@@ -17,17 +17,20 @@ description: 将 plan.md 的包分解拆分为 tracer-bullet tickets。每票是
 2. **Prefactoring 识别** — 在写新功能前，先重构让变更更容易
 3. **显式依赖** — 声明 blocking 关系，明确执行顺序
 4. **单一职责** — 一票只做一件事，可独立完成、独立验证
-5. **ticket 只写执行细节** — 在哪个 seam 测、改哪个文件哪段、测试用例、验收标准。**方案细节（用什么、怎么实现、风险）不在 ticket 里复述**，ticket 头部标 `**来源**: plan P<N>` 指向 plan 条目
+5. **有 plan 时不复述方案** — ticket 写测试 seam、改动范围、测试用例、验收标准，用 `Plan:` 引用本地文件/独立 issue 及 P<N>；省略 plan 的单票小改动则在 ticket 中写清必要技术决策
 6. **plan 条目默认 1:1 对应 ticket，允许 1:N** — 一个包太大就拆多张 ticket，都标同一 plan 来源
+7. **复用验证资产** — 每票声明验证方式与已有测试落点；不把“一票一文件”的 ticket 规则套到测试文件上
 
 ## 操作步骤
 
+先读 [共享执行约定](../_agents/workflow-contract.md)，按统一的 `Spec:`、`Plan:`、`Blocked by:` 与 tracker 状态声明生成 ticket。
+
 ### Step 0: 读取 plan 包分解
 
-读取 `.scratch/<feature-slug>/plan.md` 的**包分解**（P1..Pn），作为拆票依据。plan 缺失时按规模判断：
+按 Spec/ticket 的 `Plan:` 读取现行 plan 的**包分解**（P1..Pn）：本地为 `.scratch/<feature-slug>/plan.md`，远程为独立 Plan issue 的正文。读取正文批准状态与对应用户授权，不能用 issue 已关闭代替批准；已有会话授权有效时直接沿用，不重复询问。plan 缺失时按规模判断：
 
 - **跨包中等以上改动** → 提示先运行 `/to-plan`（plan 是前置卡点，不可跳过）
-- **单票小改动** → 可直接拆 ticket，跳过 plan（但仍需在 ticket 头部记录"无 plan，原因：单票小改动"）
+- **单票小改动** → 可直接拆 ticket，写 `Plan: none (单票小改动)`；未产出 spec 时也写 `Spec: none (原因)`，并将产品边界、必要技术决策、测试 seam 和验收标准收在 ticket 中
 - **微小改动** → 不必走 ticket，**但必须留记录**（见下方"记录是硬需求"）
 
 同时（若 `/to-spec` 已产出）读 `context.md` 了解现有接缝与可复用点。
@@ -79,7 +82,7 @@ description: 将 plan.md 的包分解拆分为 tracer-bullet tickets。每票是
 
 ### Step 2: 识别垂直切片
 
-将 spec 分解为可独立交付的切片。每个切片：
+将 spec 或已确认的小改动需求分解为可独立交付的切片。每个切片：
 - 从用户角度是一个完整的功能点
 - 可以独立测试验证
 - 有明确的完成标准
@@ -93,21 +96,11 @@ description: 将 plan.md 的包分解拆分为 tracer-bullet tickets。每票是
 
 ### Step 3: 声明依赖关系
 
-为每票标注 blocking 关系，并标 plan 来源：
+使用共享约定中的最小 ticket 模板，分别填写 `Spec:` 与 `Plan:`。依赖统一写 `Blocked by:`，没有依赖写 `none`；不要用“来源”同时表达 spec 版本与 plan 包。
 
-```markdown
-## Ticket 2: 评论数据模型 + 基础 API
-**来源**: plan P2
-**描述**: 创建 Comment 模型，实现创建/查询接口
-**测试 seam**: HTTP API（POST/GET /posts/:id/comments）
-**测试用例**: 创建成功/查询返回列表/未登录 401
-**阻塞**: Ticket 1
-**验收标准**: 
-- POST /posts/:id/comments 可创建评论
-- GET /posts/:id/comments 可查询评论列表
-```
+按[共享验证规则](../_agents/workflow-contract.md#验证方式与测试组织)填写“验证方式”：优先指定已有测试文件/fixtures 或适用检查命令，说明本票缺少的覆盖。不要预设每票新增一个 test 文件；只有独立测试边界或项目约定确有需要时才新建。文档、配置、纯重构可使用对应检查，不为凑红—绿循环制造测试。
 
-**关键：** ticket 只写执行细节（描述/测试 seam/测试用例/验收标准），**"用什么技术、怎么实现、风险点"不在 ticket 里写**——那是 plan 条目的内容，ticket 标 `**来源**: plan P<N>` 引用即可。
+本地评论 API 票可写 `Spec: spec.md`、`Plan: plan.md#P2`、`Blocked by: 01-prefactor`；远程可写 `Spec: #100`、`Plan: #101 / P2`、`Blocked by: #102`。技术方案在 plan 正文中维护，方法级锚点不复制进 ticket；无 plan 时使用 Step 0 的小改动规则。
 
 ### Step 4: 用户确认
 
@@ -116,16 +109,17 @@ description: 将 plan.md 的包分解拆分为 tracer-bullet tickets。每票是
 - 依赖关系是否正确？
 - 是否需要合并或拆分？
 
+已有针对票据粒度和依赖的明确确认时直接沿用，不重复询问。
+
 ### Step 5: 保存 tickets
 
 读取 `docs/agents/issue-tracker.md` 判断 tracker 模式；若该文件缺失，提示先运行 `/init-dev-flow`。ticket 的存放路径与格式遵循该文件的约定。
 
-**状态字段约定：** 每张 ticket 都必须有 `Status:`，合法值只有：
-- `ready`：已创建、依赖已声明，等待执行
-- `claimed`：已被当前执行者领取，正在执行
-- `resolved`：实现完成、验证通过、已按提交策略处理
+**状态字段约定：** 每张 ticket 都必须有 `Status:`，新票初始为 `ready`。合法值与依赖语义以 tracker 声明为准，不在本技能硬编码三态；各默认状态含义见共享执行约定。
 
-**本地模式补充规则：** 每张 ticket 一个文件 `.scratch/<feature-slug>/issues/<NN>-<slug>.md`，从 `01` 编号（blocker 在前），文件头部含 `Status: ready`、`Blocked by:` 行。**绝不合并成单一文件**。GitHub/GitLab 模式每张 ticket 一个 issue，用平台 blocking 关系或 `Blocked by:` 行声明依赖，并同步使用上述三种状态语义。
+**本地模式补充规则：** 每张 ticket 一个文件 `.scratch/<feature-slug>/issues/<NN>-<slug>.md`，从 `01` 编号（blocker 在前），头部字段遵循共享约定。**绝不合并成单一文件**。GitHub/GitLab 模式每张 ticket 一个 issue，使用相同字段和 tracker 声明的状态语义；若使用平台 blocking 关系，须与 `Blocked by:` 一致，工具不支持时用正文字段声明并如实报告未同步原生关系。
+
+远程票创建后，将其引用回填独立 Plan issue 的关联 tickets 清单；不将 ticket 或 plan 正文追加到 Spec 评论里。
 
 ## 产出物
 
@@ -134,4 +128,4 @@ description: 将 plan.md 的包分解拆分为 tracer-bullet tickets。每票是
 
 ## 下一步
 
-Tickets 确认后，进入 `/implement` 阶段，逐票实现。implementer 读 plan 条目理解"为什么这么做"，读 ticket 执行细节。
+Tickets 确认后，进入 `/implement` 阶段，逐票实现。有 plan 时读其技术方案；明确省略 plan/spec 时按 ticket 中已确认的决策与验收执行。

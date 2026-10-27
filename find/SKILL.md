@@ -11,6 +11,8 @@ description: Use when you need a read-only progress snapshot of the current repo
 
 ### Step 1: 确定 tracker
 
+字段、兼容格式与默认状态语义参见 [共享执行约定](../_agents/workflow-contract.md)。本技能只读取，不迁移或补写 tracker。
+
 读取 `docs/agents/issue-tracker.md`。
 
 - 文件缺失：报告“未初始化，请先运行 `/init-dev-flow`”，停止
@@ -21,14 +23,14 @@ description: Use when you need a read-only progress snapshot of the current repo
 
 ### Step 2: 发现 feature（可选使用 scout）
 
-- 用户传入 feature：只检查 `.scratch/<feature>/`
-- 未传 feature：主会话先扫描 `.scratch/` 的一级目录，排除 `README.md`、`architecture.md` 等非 feature 文件
+- 本地模式：传入 feature 时只检查 `.scratch/<feature>/`；未传时扫描其一级目录，排除 `README.md`、`architecture.md` 等非 feature 文件
+- 远程模式：从 tracker 声明的 feature/Spec 入口读取关联 Plan issue 和 tickets；按 `Spec:` / `Plan:` 建立关系，不要求本地 `.scratch` 存在，也不按 issue 编号、评论时间猜当前版本
 - 当 feature 结构复杂、需要定位 INDEX/spec/issues/contracts 文件时，可按 `docs/agents/execution-mode.md` 分派 `scout` 做**只读文件发现**；scout 只返回文件清单和路径，不判断状态
 - `scout` 不可用或 execution mode 为 inline 时，主会话直接扫描
 
 ### Step 3: 读取状态源（主会话）
 
-对每个 feature 读取：
+对每个 feature 读取相应模式的状态源。本地读取：
 
 1. `INDEX.md`（若存在）
    - 当前 spec 版本（INDEX 指向的版本即“当前执行层”）
@@ -38,11 +40,14 @@ description: Use when you need a read-only progress snapshot of the current repo
    - 没有 INDEX 时使用 `spec.md` 或最新 `spec-vN.md`
 3. `issues/*.md`
    - `Status:`（按 tracker 值域解析）
-   - 依赖字段：`Blocked by:` 与 `**依赖**:` 两种格式都识别
+   - `Spec:` 与 `Plan:` 分别确定来源版本和方案包；兼容旧 `**来源**:`，按内容区分，不用 plan 包推断 spec 版本
+   - 依赖以 `Blocked by:` 为标准，读取时兼容 `**依赖**:`、`**阻塞**:`；重复字段冲突则列明字段和值，阻塞判定为 unknown
    - ticket 标题和编号
 4. `contracts/`
    - 已生成的契约文件名
 5. `.scratch/<feature>/` 下未建票的实质文档（如集成说明、走查单）——只登记，不判断状态
+
+远程读取 Spec 及其版本引用、独立 Plan issue 正文（含 `Spec:`、批准状态与 tickets 清单）、各 ticket 正文和关联契约。按 tracker 的当前版本约定定位执行版，并与 Plan 的 `Spec:` 核对；不从 Plan 包号推断版本。只在 Spec 评论发现旧 plan 时报告其位置与迁移建议，不迁移；主存不可访问或版本关系冲突时报告具体缺失信息。
 
 **状态解析规则：**
 
@@ -56,12 +61,12 @@ description: Use when you need a read-only progress snapshot of the current repo
 | 归类 | 典型状态值 | 含义 |
 |------|-----------|------|
 | done | `resolved` | 已验证完成，可作为依赖解除下游 |
-| code-complete | `code-complete` | 代码完成、测试通过，但未经真机/人工验证；**可作为依赖解除下游**（见依赖判定），自身不计入 fully-resolved |
+| code-complete | `code-complete` | 代码及必要自动检查通过，仍待最终验收/收尾 checkpoint；**可作为依赖解除下游**，外部条件仍需另验，自身不计入 fully-resolved |
 | parked | `parked` | 暂停/搁置（等外部条件或用户决策）；**不解除下游依赖**，不算完成 |
 | active | `ready` / `claimed` | 可执行 / 执行中 |
 | unknown | 值域外、缺失 | 状态不完整 |
 
-**父子层级语义**（amend 续接产生）：旧版本父类 ticket 被 spec-v(N+1) 的新 ticket 续接后，父类保持 `code-complete`/`parked` 作为**追踪参考**（挂数据、挂历史），不因子 ticket 存在而升级；子 ticket（新版本派生）才是执行单元，走 `ready → claimed → resolved`。判断“下一步”时只在执行层（当前 spec 版本派生的 ticket）找 `ready`；父类停在 code-complete 是正常状态，不是遗漏。
+**父子层级语义**（amend 续接产生）：旧版本父类 ticket 被 spec-v(N+1) 的新 ticket 续接后，父类保持原有 `code-complete`/`parked` 等状态作为**追踪参考**（挂数据、挂历史），不因子 ticket 存在而升级；子 ticket（新版本派生）才是执行单元，按 tracker 声明流转。判断“下一步”时只在执行层（当前 spec 版本派生的 ticket）找 `ready`；父类停在 code-complete 是正常状态，不是遗漏。
 
 **依赖判定规则：**
 
@@ -76,15 +81,18 @@ description: Use when you need a read-only progress snapshot of the current repo
 
 | 条件 | 阶段 |
 |------|------|
-| 无 spec | 需求/规划未开始 |
-| 有 spec，但无 plan | spec 已生成，等待实施蓝图 |
-| 有 plan，但无 issues | plan 已批准，等待拆 ticket |
+| 无 spec 且无 issues | 需求/规划未开始 |
+| ticket 引用的 spec/plan 缺失，且没有明确省略原因 | 状态不完整 |
+| 执行层 plan 尚未批准 | 等待 plan review，相关 ready 票不可开工 |
 | 存在 `ready` 或 `claimed` ticket（执行层） | 实现中 |
 | 所有 ticket 为 `resolved`（无 code-complete/parked 残留） | 已完成 |
 | 存在 unknown Status | 状态不完整 |
 | 仅 done + code-complete + parked，无 active | 等待验证/收尾（有 code-complete 未验证，或有 parked 待决策） |
+| 无 issues，有 spec 但无 plan | 等待实施蓝图，或按小改动规则直接拆票 |
+| 无 issues，plan 存在但未批准 | 等待 plan review |
+| 无 issues，plan 已批准 | 等待拆 ticket |
 
-**plan 状态：** `.scratch/<feature>/plan.md` 是否存在、是否经用户批准（批准状态记在 plan 头部）。plan 缺失但有 spec → 阶段=等待实施蓝图；plan 存在未批准 → 在 Warnings 提示"plan 待 review，未批准前不拆票"。
+**简化流程与 plan 状态：** ticket 明确写 `Spec: none (原因)` / `Plan: none (原因)` 且包含必要决策时，按 ticket 实际状态判断阶段。已有 plan 的批准状态读文件/issue 正文的戳记及授权依据；不由 open/closed 推断，未批准的执行票不列为可执行。
 
 若有 `claimed` ticket，显示正在执行的 ticket；若多个 `claimed`，显示并发执行提示。
 
@@ -96,8 +104,8 @@ description: Use when you need a read-only progress snapshot of the current repo
 Feature: <feature>
 Tracker: local markdown / GitHub / GitLab
 Stage: <阶段>
-Spec: <当前 spec 文件或 unknown>
-Plan: <plan.md（已批准/待 review）或 无>
+Spec: <当前 spec 文件/issue 版本引用或 unknown>
+Plan: <现行 plan 文件/独立 issue（已批准/待 review）或 无>
 
 Progress: <n> resolved / <n> code-complete / <n> parked / <n> active / <n> unknown（共 <total>）
 
@@ -117,7 +125,7 @@ Contracts:
 - <ticket-contract-file>
 
 Next:
-- <执行层（当前 spec 版本派生）中唯一可执行的 ready ticket>
+- <执行层中依赖已解除且引用方案已批准的唯一可执行 ready ticket；明确省略 plan 时按简化规则>
 - 老版本遗留的 ready 照列但标注其外部阻塞，不冒充“立即能做”
 - 没有可执行 ticket 时明确说明原因
 

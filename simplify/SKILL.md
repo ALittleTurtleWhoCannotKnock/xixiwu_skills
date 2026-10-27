@@ -36,6 +36,8 @@ description: 代码清理。主会话确定 scope 与触发时机（读 commit-s
 
 **先读执行模式：** 读取 `docs/agents/execution-mode.md`。缺失或内容无法识别（非 `subagent`/`inline`，如被改坏）时默认 `subagent` 并提示用户检查配置。用户可在单次执行时覆盖默认。
 
+分派时按[共享执行约定的基础模型规则](../_agents/workflow-contract.md#基础模型)读取并应用用户选择；inline 模式沿用主会话。
+
 **默认 / `subagent` 模式 → 分派给 `simplifier` 子 agent**，传入 diff scope。子 agent 会：
 - 读改动代码
 - 按"复用/质量/效率"三维度审查（详见下方"审查维度"）

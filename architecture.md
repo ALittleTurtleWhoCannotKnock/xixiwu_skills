@@ -20,7 +20,7 @@ flowchart TB
 
     subgraph SUB["EX / 执行型子 agent"]
         scout["scout<br/>代码侦察 → context.md"]
-        implementer["implementer<br/>TDD 红绿重构"]
+        implementer["implementer<br/>实现与验证，复用已有测试"]
         simplifier["simplifier<br/>提交前清理"]
         contractwriter["contract-writer<br/>接口契约"]
         exporter["exporter<br/>会话导出"]
@@ -28,7 +28,7 @@ flowchart TB
 
     subgraph OUT["04 / 产出物"]
         config["docs/agents/<br/>三项配置"]
-        scratch[".scratch/<br/>spec + tickets + contracts<br/>INDEX.md + Status 状态"]
+        scratch["tracker 产物<br/>Spec / Plan / tickets / contracts<br/>本地文件或远程独立 issues"]
         code["代码 + 测试<br/>working tree"]
     end
 
@@ -62,20 +62,20 @@ flowchart TB
 |------|------|
 | 01 / 开发者 | 发起命令、人工确认（checkpoint） |
 | 02 / 主会话 | 编排：grill → spec → plan（审）→ tickets → implement（含 Step 3.5 ticket 修正）、find、amend |
-| EX / 执行型子 agent | 纯执行：scout（侦察）、implementer（TDD）、simplifier（清理）、contract-writer（契约）、exporter（导出），不提交 |
-| 04 / 产出物 | 配置、.scratch（spec/tickets/contracts/INDEX）、代码与测试 |
+| EX / 执行型子 agent | 纯执行：scout（侦察）、implementer（实现与验证）、simplifier（清理）、contract-writer（契约）、exporter（导出），不提交 |
+| 04 / 产出物 | 配置、tracker 中的 Spec/Plan/tickets/contracts、本地版本索引或远程版本引用、代码与测试 |
 
 ## 关键流转
 
 - **主流程（实线）**：init → grill → spec → plan（人工审）→ tickets → implement → 人工确认 → 提交
-- **增量演进**：已实现 spec 有变动 → amend → 生成 spec-v(N+1) + 更新 INDEX + 续接 ticket → implement
+- **增量演进**：已实现 Spec 有变动 → amend → 保存增量版本、更新当前版本引用与同一 Plan 正文、续接 ticket → implement
 - **分派（虚线）**：spec → scout；implement → implementer / simplifier / contract-writer
-- **版本与状态管理**：`.scratch/<feature>/INDEX.md` 记录当前 spec 版本；ticket 用 `Status: ready → claimed → resolved` 记录进度，agent 实现一律先读 INDEX 与 ticket 状态
+- **版本与状态管理**：本地由 INDEX 记录当前 Spec，远程按 tracker 的版本引用及 Plan 正文 `Spec:` 核对；ticket 用 `Spec:` / `Plan:` 分别关联。默认 `ready → claimed → code-complete → resolved`，搁置用 `parked`，以 tracker 声明为准。每票自动验证后更新依赖，squash 不阻塞下游；最终验收与 checkpoint 通过才 resolved。共享定义见 `_agents/workflow-contract.md`
 - **人工卡点**：simplifier 报告 → 人工确认 → 提交
 
 ## 设计原则
 
 - **编排与执行分离**：主会话决策，子 agent 执行
 - **决策前置**：spec/ticket/plan 拍死决策（spec=产品、plan=技术、ticket=执行细节），子 agent 遇未覆盖决策即停止报告
-- **产出物即输入**：.scratch 的 spec/plan/tickets/INDEX 驱动 implement 与 amend，配置驱动全流程
+- **产出物即输入**：本地文件或远程 Spec/Plan/ticket issues 驱动实现；远程 Plan 使用独立 issue 正文并双向关联，配置决定主存
 - **方向修正闭环**：implementer 报方向错误 → 主会话 Step 3.5 对齐修正 + 按需回写 spec → 重新分派（≥2 次则停，人工介入）

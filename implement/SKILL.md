@@ -1,22 +1,22 @@
 ---
 name: implement
-description: 按 ticket 实现功能。主会话负责编排（选 ticket、确认 seam、review、提交决策），TDD 执行分派给 implementer 子 agent（自治跑红-绿-重构）。适用于有明确 ticket，需要写代码实现的场景。
+description: 按 ticket 实现并验证改动。主会话确认验证方式、编排与 review，implementer 复用现有测试；行为改动优先 TDD，纯重构做前后回归，文档与配置使用适用检查。适用于有明确执行票的场景。
 ---
 
 # Implement
 
-按 ticket 实现功能。**主会话做编排与决策，TDD 执行分派给 `implementer` 子 agent。**
+按 ticket 实现并验证改动。**主会话做编排与决策，执行分派给 `implementer` 子 agent。**
 
 ## 触发信号
 
 - Tickets 已通过 `/to-tickets` 确认
 - 有明确的、可执行的 ticket
-- 需要写代码实现
+- 需要按票据修改代码、配置或文档
 
 ## 核心 Discipline
 
-1. **编排与执行分离** — 主会话选 ticket、确认 seam、review、提交；子 agent 只跑 TDD
-2. **在预先约定的 seams 处测试** — 使用 `/to-spec` 确定的测试边界
+1. **编排与执行分离** — 主会话选 ticket、确认验证方式、review 和处理提交；子 agent 负责实现与验证
+2. **验证与改动匹配** — 行为改动在约定 seam 处测试；其他改动采用适用检查，优先复用现有测试，不为每票新建测试文件
 3. **决策前置** — spec/ticket/plan 已拍死所有决策；子 agent 遇到未覆盖的决策会停止并报告，不猜测
 4. **决策归属分层** — **技术决策查 plan**（用什么、怎么实现、风险），**产品边界查 spec**（做什么、不做什么、谁负责），**执行细节查 ticket**（seams、测试用例、验收标准）
 5. **plan 发现 spec 不可行 → 回写 spec** — 若实现时发现 spec 的产品决策技术上不可行，**不自行变通**，走"理解纠偏"回写 spec（Step 3.5 修正层级判断），让产品决策与技术现实对齐
@@ -25,46 +25,54 @@ description: 按 ticket 实现功能。主会话负责编排（选 ticket、确�
 
 ## 操作步骤
 
+先读 [共享执行约定](../_agents/workflow-contract.md) 和目标仓库的 tracker 声明，统一字段、状态与依赖判定。
+
 ### Step 1: 选择 ticket（主会话）
 
-根据依赖关系，选择下一张可执行的 ticket（所有 blocking 已解除）。从 tracker 读取 ticket 与所属 spec。
+根据依赖关系，选择下一张可执行的 ticket（所有 blocking 已按 tracker 语义解除）。`resolved` 与已声明的 `code-complete` 可解除 ticket 依赖，后者需提示待最终验收；外部验证条件仍单独核实。从 tracker 读取 ticket 的 `Spec:`、`Plan:` 引用；明确标记 `none (原因)` 的小改动使用 ticket 内已确认的决策，不读取被省略的文档。
+
+有 plan 时读取其文件或独立 Plan issue 正文及对应 P<N>，核实当前方案已有用户批准；issue 已关闭不能代替批准。远程以 issue 正文为主存，不能改读本地副本或把讨论评论当现行方案。
 
 **领取 ticket：** 开始执行前，先在 tracker 中将该 ticket 的 `Status:` 从 `ready` 改为 `claimed`，记录当前执行者（本地文件可在状态行后加 `By: <agent/user>`）。如果 ticket 已是 `claimed`，不要抢占，先报告已有执行者；只有明确确认是遗留 claim 才能接管。
 
-**若 feature 有多个 spec 版本**（存在 `INDEX.md`）：先读 `.scratch/<feature>/INDEX.md` 确定"当前版本"，读最新 spec（`spec-vN.md`）。最新 spec 只记变动点，需背景时按其指引回溯旧版本。
+**若 feature 有多个 spec 版本**：本地读 `INDEX.md`；远程读 tracker 的当前版本引用，并与 Plan issue 正文的 `Spec:` 核对。ticket 的 `Spec:` 必须对应本次执行版本；增量版本需背景时沿引用回溯，不把旧版追踪票当作当前执行票。
 
-### Step 2: 确认测试 seam（主会话）
+### Step 2: 确认验证方式与测试落点（主会话）
 
-回顾 spec 中确定的 seams：
-- 在哪个层级写测试？（HTTP API / Service / 其他）
-- 测试外部行为，不测试内部实现细节
-- 若 spec 未确定 seams（或未运行 `/to-spec`），与用户确认最高层现有 seam 后再继续
+读取[共享验证规则](../_agents/workflow-contract.md#验证方式与测试组织)，结合 spec/ticket 已确认的要求：
 
-### Step 3: 执行 TDD（默认分派 implementer 子 agent）
+- 先找已有测试框架、相同 seam 的测试文件、fixtures 与命令，确定可以直接复用或扩展的位置
+- 行为/接口/bug 使用行为测试；纯重构运行前后回归；文档、配置、样式采用对应检查，不强行创建失败测试
+- 记录验证方式及测试落点；相同输入维度用参数化/子测试，只有确实没有合适位置时新增文件并说明理由
+- 行为测试边界确实缺失时补齐必要决策；已有授权沿用。非运行行为不强制定义 seam，但必须说明实际如何验证
+
+### Step 3: 实施与验证（默认分派 implementer 子 agent）
 
 **先读执行模式：** 读取 `docs/agents/execution-mode.md`。缺失或内容无法识别（非 `subagent`/`inline`，如被改坏）时默认 `subagent` 并提示用户检查配置。用户可在单次执行时覆盖默认。
 
-**默认 / `subagent` 模式 → 分派给 `implementer` 子 agent**，传入：
-- ticket 文件路径（含验收标准、`Blocked by`）
-- ticket 的 `**来源**: plan P<N>` 对应 plan 条目（技术方案、风险点、**改动锚点**）
-- **plan 路径**：`.scratch/<feature>/plan.md`（implementer 读它获取 P<N> 条目全文，含改动锚点 `文件#方法`）
-- spec 路径（含约定的 test seams、产品边界）
-- commit-strategy 路径
-- 相关代码/测试位置指引
+分派时按[共享执行约定的基础模型规则](../_agents/workflow-contract.md#基础模型)读取并应用用户选择；inline 模式沿用主会话。
 
-`implementer` 子 agent 会自治地：确认 blocker 已解 → 在约定 seam 处跑红-绿-重构 → 自 review（Standards + Spec）→ 返回结构化报告（实现了什么、测试状态、文件改动、未满足的验收标准、若提前停止则说明缺失的决策）。
+**默认 / `subagent` 模式 → 分派给 `implementer` 子 agent**，传入：
+- ticket 文件/issue 引用及当前正文（含验收标准、`Blocked by`）
+- 共享执行约定正文与 tracker 的状态声明（注册适配器已附带约定时无需重复传）
+- `Plan:` 引用的本地 plan 或独立 Plan issue 及 P<N> 正文（含技术方案、风险、现有挂接点和目标态锚点）；明确省略时传 ticket 内的技术决策并跳过 plan 锚点检查
+- `Spec:` 引用的文件/issue 及版本内容（含 test seams、产品边界）；明确省略时使用 ticket 内的对应约定
+- commit-strategy 路径
+- 所选验证方式、相关代码、可复用测试/fixtures 与检查命令
+
+`implementer` 子 agent 会自治地：确认 blocker 已解 → 复用已有测试并按选定方式实现与验证 → 自 review → 报告验证策略、测试文件变化、实际运行结果与未满足的验收标准。
 
 **主会话等待子 agent 报告。** 若子 agent 报告"缺少某决策导致无法继续"，主会话与用户澄清该决策后，可将澄清结果重新分派给子 agent 继续。
 
 **若子 agent 报告"ticket 的技术方向在现有架构中不成立"**（不是信息缺失，而是方案本身错了，如把某能力安错了通道），进入 **Step 3.5 修正流程**，不要直接重做或放弃。
 
-**`inline` 模式 / 用户单次覆盖 → 主会话直接执行**：参照 `_agents/implementer.prompt.md` 中的 TDD 循环与规则，在约定 seam 处跑红-绿-重构（不重启子进程）。
+**`inline` 模式 / 用户单次覆盖 → 主会话直接执行**：参照 `_agents/implementer.prompt.md` 中相同的实现与验证规则，不重启子进程。
 
-> 执行逻辑（TDD 循环、规则）的单一事实源是 `_agents/implementer.prompt.md`；两种模式只是执行主体不同。各工具通过 `adapters/` 注册子 agent 后，用对应分派机制启动（Pi 用 subagent 工具，Claude Code 用 Agent 工具，Codex 用 dispatch）。
+> 执行逻辑的单一事实源是 `_agents/implementer.prompt.md`，验证分类与测试组织见共享约定；两种模式只是执行主体不同。各工具通过 `adapters/` 注册子 agent 后，用对应分派机制启动。
 
 ### Step 3.5: ticket 方向修正（主会话）
 
-当 ticket 的技术落地方向在现有架构中不成立时（此时 spec 大方向通常没错，是 ticket 理解错了），**或当 plan 的改动锚点（`文件#方法`）在当前代码里找不到**（方法被改名/挪位/删除，锚点腐化）：
+当 ticket 的技术落地方向在现有架构中不成立时（此时 spec 大方向通常没错，是 ticket 理解错了），**或当按计划应已存在的锚点在当前代码里找不到**（非预期改名/挪位/删除）：进入本流程。尚待本票或后续票生成的目标态缺失不算方向错误，按 plan 声明的生成阶段检查。
 
 **1. 对齐现有架构**
 
@@ -72,11 +80,11 @@ description: 按 ticket 实现功能。主会话负责编排（选 ticket、确�
 
 **2. 修正 ticket**
 
-更新该 ticket 的方案描述与验收标准，并在 ticket 内追加**修正记录**（"原方向 X 为何不成立 → 修正为 Y"+ 架构依据），保留演进痕迹。
+技术方向或锚点变化先更新 `Plan:` 引用的条目；无 plan 时更新 ticket 内的技术决策。必要时同步 ticket 的执行描述与验收标准，并追加**修正记录**（"原方向 X 为何不成立 → 修正为 Y"+ 架构依据），不把 plan 锚点复制进 ticket。
 
 **3. 修正层级判断（关键：防止 spec 与 ticket 脱节）**
 
-判断该修正属于哪类，决定是否回写 spec：
+判断该修正属于哪类，决定是否回写 spec；明确省略 spec 的小改动在 ticket 的对应决策处修正：
 
 | 修正类型 | 特征 | 是否回写 spec |
 |---------|------|--------------|
@@ -86,11 +94,11 @@ description: 按 ticket 实现功能。主会话负责编排（选 ticket、确�
 
 **判断标准：这个修正会不会改变"后来者对需求/方案的理解"？会 → 回写；只是实现细节 → 留 ticket。**
 
-**plan 发现 spec 不可行时（特殊情形）：** 若 plan 的技术路径与 spec 的产品决策冲突（技术上做不到产品要的），**不自行变通**——把冲突上报，走"理解纠偏"路径**回写 spec**（修订产品决策，让产品与技术现实对齐），同时 plan 就地更新技术路径。这是唯一允许触发 spec 修订的实现期情形，必须经用户确认后才改 spec。
+**plan 发现 spec 不可行时（特殊情形）：** 若 plan 的技术路径与 spec 的产品决策冲突（技术上做不到产品要的），**不自行变通**——把冲突上报，走"理解纠偏"路径**回写 spec**（修订产品决策，让产品与技术现实对齐），同时 plan 就地更新技术路径。此时涉及产品决策修订，必须经用户确认后才改 spec。
 
 **4. 回写 spec（仅理解纠偏 / 必要的约束时）**
 
-更新 spec 对应处（方案概述 / 时序图 / 相关决策行），保持 **spec 始终是"最准的事实源"**。在相关处加一行轻量变更说明：
+更新 spec 对应处（方案概述 / 功能流程图 / 时序图 / 相关决策行），保持 **spec 始终是"最准的事实源"**。本地改文件，远程改对应正文；Plan 的技术修正写回同一 Plan issue 正文，不追加成 Spec 评论。在相关处加一行轻量变更说明：
 
 ```
 > 修正（ticket NN）：[一句话说明修正内容 + 依据]。原理解 [X] 在现有架构不成立，修正为 [Y]。
@@ -109,9 +117,9 @@ description: 按 ticket 实现功能。主会话负责编排（选 ticket、确�
 核对子 agent 的报告，分两个层面：
 
 **A. 完成度核对：**
-- 验收标准是否全部满足？
-- 测试是否全部通过、类型检查是否通过？
-- 改动是否确实只在约定 seam 处测试？
+- 代码行为是否覆盖验收标准？区分自动验证已通过的项目与仍待人工/真机验证的项目，后者只允许停在 code-complete
+- 约定的必要检查是否实际通过，不适用项是否有依据？失败或未运行的必要检查仍阻塞完成
+- 是否复用了现有覆盖？新增测试文件有无必要，临时探针是否清理？行为测试是否在约定 seam 验证真实行为？
 
 **B. 问题分级审查（决定能否进提交节点）：**
 
@@ -127,34 +135,38 @@ description: 按 ticket 实现功能。主会话负责编排（选 ticket、确�
 
 只报告有证据支撑的问题，不发明问题。全部合格时明确说"无阻塞问题"。如有 P0/P1，退回子 agent 修正或退回用户决策。
 
+**每票验证后的状态与产出（不等待提交）：**
+
+- 代码与必要自动检查实际通过后，按 tracker 声明将 `claimed` 更新为 `code-complete`，列出剩余人工/真机验收和收尾 checkpoint；失败或未运行的必要自动检查保持 `claimed`。旧 tracker 未声明中间态时，先补齐状态约定，不写入未知状态或提前标 `resolved`。
+- 立即按共享约定更新依赖，允许下一票依赖已声明的 `code-complete`；未满足的外部条件仍阻塞。
+- 涉及对外 HTTP 端点时，此时触发 `/to-api-contract` 产出契约，供后续联调；不推迟到 squash 提交之后。
+
 ### Step 5: 清理与提交（主会话）
 
 **提交节奏由 `docs/agents/commit-strategy.md` 决定**（缺失则提示先运行 `/init-dev-flow`）：
 
-- **per-ticket** → 每张 ticket 完成即进入提交流程
-- **squash** → 跳过单 ticket 提交，待所有 ticket 完成后统一进入提交流程
+- **per-ticket** → 每张 ticket 达到 `code-complete` 后进入收尾流程
+- **squash** → 逐票完成 Step 4，待执行票全部达到 `code-complete` 或 `resolved` 后统一收尾；`parked`、未知状态及未通过验证的票不能算完成
 
 **提交流程（到达提交节点时）：**
 
 > 提交与推送永远需要用户明确确认。即使所有检查通过，也先停在人工 checkpoint，绝不自动提交。
 
 1. 触发 `/simplify`（其内部会分派 `simplifier` 子 agent 清理，scope 由 commit-strategy 决定）
-2. `/simplify` 修复后留**人工 checkpoint**，用户确认后再提交
-3. 提交代码（关联 ticket / feature，提交动作仍需用户明确指示）
-4. **验证通过后**，在 tracker 中将该 ticket 的 `Status:` 从 `claimed` 改为 `resolved`；若验证失败，保持 `claimed` 并报告失败原因，不得标记 resolved
-5. 更新 ticket 依赖状态，解锁后续 ticket
-6. **若该 ticket 涉及对外 HTTP 端点**（新增或修改路由），触发 `/to-api-contract`（内部会分派 `contract-writer` 子 agent）产出接口契约片段，供前端 agent 联调
+2. 清理有改动时重跑相关验证；若接口改变，同步重生成契约。核实所有必需验收，保留未完成的人工/真机项
+3. 展示结果并处理**人工 checkpoint**。用户明确授权提交后才执行 Git 提交；用户选择暂不提交则记录该选择，保留工作区改动
+4. 所有必需验收通过且收尾 checkpoint 已处理后，才将对应票标为 `resolved`。仍待最终验收的票保持 `code-complete`；必要自动验证失败时退回 `claimed` 并重新检查受影响的下游依赖。提交记录与验收状态分别维护
 
 ## 产出物
 
-- 可运行的代码（带测试）
-- Review + simplify 通过的提交
+- 完成的改动及适用验证证据；有回归价值的行为测试保留在现有体系中
+- Review + simplify 结果，以及经明确授权的提交或保留工作区的记录
 - 更新的 ticket 状态
 - （涉及端点的后端 ticket）对应接口契约片段 `.scratch/<feature-slug>/contracts/<ticket-slug>.md`
 
 ## 完成标准
 
 - 所有 ticket 完成
-- 所有测试通过
+- 所有适用的必要检查通过，失败、未运行和待人工验证项如实记录，不能提前标记最终完成
 - 子 agent 报告验收标准全满足
 - simplify 清理完成并经用户确认

@@ -36,7 +36,7 @@ Write to the output path:
 2. `path/to/other.ts` (lines 100-150) - why it matters
 
 ## Key Code
-The critical types, interfaces, functions, and small snippets that matter. For functions likely to be change points, note them as `file#methodName` anchors (target-state: if this area is being refactored, cite post-refactor names) with a one-line note on current responsibility — no code bodies here, just enough for the plan writer to cite without re-reading.
+The critical types, interfaces, functions, and small snippets that matter. For likely change points, cite existing `file#methodName` anchors with their current responsibility. Do not invent post-refactor names; if an approved plan already defines a target-state symbol, distinguish it from current code and name the phase responsible for creating it. No code bodies here, just enough for the plan writer to cite without re-reading.
 
 ## Architecture
 How the pieces connect.

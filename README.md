@@ -41,7 +41,7 @@
 | 2. 拆需求 | `/to-spec` | 四段式结构化 spec（产品意图与边界），含 seams 分析 | 交互型，留主会话 |
 | 2.5 实施蓝图 | `/to-plan` | 技术决策/包分解/风险点，经人工审后拆票 | 交互型，留主会话 |
 | 3. 拆 ticket | `/to-tickets` | Tracer-bullet 拆分执行细节，引用 plan 条目 | 交互型，留主会话 |
-| 4. 实现 | `/implement` | 在约定 seams 处 TDD，自动 review | ✅ `implementer`（单张 ticket 自治执行） |
+| 4. 实现 | `/implement` | 按改动选择验证方式，复用测试并 review | ✅ `implementer`（单张 ticket 自治执行） |
 | 辅助 | `/find` | 只读聚合当前 feature/阶段/ticket 状态/阻塞项/下一步 | 主会话解析，scout 可做文件发现 |
 | 辅助 | `/amend` | 已实现 spec 的需求变动（增量演进 + 深度判断闸门） | 交互型，留主会话 |
 | 辅助 | `/simplify` | 提交前清理代码（复用/质量/效率） | ✅ `simplifier` |
@@ -49,6 +49,8 @@
 | 辅助 | `/e2e-test` | 写可进 CI 的浏览器 E2E 测试（先探测项目体系） | 交互型编排，写测试可派 implementer |
 | 辅助 | `/export-session` | 导出会话原始记录为 Markdown | ✅ `exporter` |
 | 辅助 | `/to-api-contract` | 按 ticket 产出接口契约（给前端 agent） | ✅ `contract-writer` |
+
+**Tracker 产物：** 本地分别保存 Spec、`plan.md` 和 ticket 文件；GitHub/GitLab 分别使用 Spec issue、独立 Plan issue 和 ticket issues。Plan 正文保存现行技术方案，关联 Spec 与 tickets，评论记录讨论和批准依据；amend 更新同一 Plan issue，不新建 plan-vN。字段与关联规则见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md#tracker-产物与-plan-引用)。
 
 ## 执行型子 agent
 
@@ -65,39 +67,43 @@ _agents/                # 工具无关的 system prompt（改 prompt 改这里�
 ├── scout.prompt.md
 └── diagram-guide.md      # 图示规范（mermaid），非独立 agent
 
-adapters/               # 工具配置（改模型/工具白名单改这里）
+adapters/               # 工具适配（thinking / 工具白名单）
 ├── build.sh            # 一键生成各工具 agent 文件：./adapters/build.sh all
 └── codex/README.md
 ```
 
-| Agent | 职责 | 模型（Pi，可在 build.sh 配置） | thinking | 自治度 |
-|-------|------|-----------|----------|--------|
-| `exporter` | 会话格式转换 | 见 build.sh MODEL 变量 | low | 完全自治 |
-| `simplifier` | 提交前代码清理 | 同上 | medium | 完全自治，不提交 |
-| `contract-writer` | 接口契约提取 | 同上 | medium | 完全自治 |
-| `implementer` | 单张 ticket 的 TDD 执行 | 同上 | high | 完全自治，不提交/不跑 simplify |
-| `scout` | 代码侦察 → context.md | 同上 | low | 完全自治 |
+| Agent | 职责 | thinking | 自治度 |
+|-------|------|----------|--------|
+| `exporter` | 会话格式转换 | low | 完全自治 |
+| `simplifier` | 提交前代码清理 | medium | 完全自治，不提交 |
+| `contract-writer` | 接口契约提取 | medium | 完全自治 |
+| `implementer` | 单张 ticket 的实现与验证 | high | 完全自治，不提交/不跑 simplify |
+| `scout` | 代码侦察 → context.md | low | 完全自治 |
 
 **设计原则：**
 - **决策前置**：spec/ticket/plan 阶段已拍死所有决策（spec=产品、plan=技术、ticket=执行细节），执行型 agent 遇到未覆盖的决策就停止并报告，绝不猜测或扩大范围。因此它们不依赖"中途回问主 agent"的通道，能跨 Pi / Claude Code / Codex 统一
 - **边界清晰**：子 agent 都不 commit、不跑 simplify（那是主 agent 在提交节点、经人工 checkpoint 后做的）
-- **状态闭环**：ticket 使用 `Status: ready`（待执行）/ `claimed`（执行中）/ `resolved`（验证完成）；implement 开始时领取为 claimed，验证和 checkpoint 完成后才 resolved
+- **状态闭环**：字段与状态语义统一见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md)。每票领取为 `claimed`，必要自动检查通过后记 `code-complete` 并解除 ticket 依赖；最终验收和 checkpoint 完成后才 `resolved`，提交节奏独立处理
+- **小改动入口**：单票小改动可明确省略 spec/plan，必要决策、测试边界与验收写在 ticket 中；下游按该约定执行
+- **测试组织**：优先复用测试文件和 fixtures，同类输入参数化；业务/bug 使用行为测试，纯重构做前后回归，文档/配置/样式采用适用检查。必要验证仍须通过，不按 ticket 批量生成 test 文件。规则见[共享验证约定](./_agents/workflow-contract.md#验证方式与测试组织)
 - **进度查询**：`/find` 只读聚合状态，不修改任何状态；scout 只负责复杂目录发现，状态判断由主会话完成
 - **交互型留主会话**：grill / diagnosing / spec / tickets 需要与你来回对话，不适合隔离
 
 **生成/更新 agent 文件：**
 ```bash
-# 方式 1: 使用初始化时配置的模型（推荐）
-./adapters/build.sh all     # 自动读取 docs/agents/execution-mode.md 中的基础模型
+./adapters/build.sh all --project-root /path/to/project
 
-# 方式 2: 环境变量临时覆盖（CI/特殊场景）
-export DEV_FLOW_MODEL="your-provider/your-model"
-./adapters/build.sh all
+# 预览生成结果，写入独立目录
+./adapters/build.sh all --project-root /path/to/project --output-dir /tmp/dev-flow-preview
 ```
 
-**模型配置优先级：** 环境变量 `DEV_FLOW_MODEL` > `docs/agents/execution-mode.md` 中的"基础模型" > 默认值 `anthropic/claude-sonnet-4`
+**基础模型由使用者在初始化时选择：** `/init-dev-flow` 引导用户从当前工具实际可用的模型中选择，或明确选择 `inherit`，保存到 `docs/agents/execution-mode.md`。通用模板不写死模型名或供应商。
 
-**初始化时配置模型：** `/init-dev-flow` 在选择"派子 agent"后，会列出你已配置的模型列表供选择，存入 `execution-mode.md`。之后 `build.sh` 自动读取，无需每次设置环境变量。
+Pi 构建时的优先级为 `DEV_FLOW_MODEL` 临时覆盖 > 目标项目的“基础模型”；没有显式配置时省略 `model` 字段，交给工具自身的默认规则，不提供内置模型。其他工具分派时按各自支持的格式使用项目选择。
+
+`--project-root` 明确指定配置所属项目，省略时固定使用技能库根目录，不随启动目录改变。
+
+`--output-dir` 将 Pi/Claude Code 文件分别生成到指定目录的 `pi/`、`claude-code/` 中，供预览和隔离测试；省略时写入对应工具的用户级 agents 目录。`codex` 目标仅显示使用说明，不写文件。
 
 **是否派子 agent 是可配置的：** 初始化时（`/init-dev-flow`）会询问你的默认执行模式，存入 `docs/agents/execution-mode.md`：
 - `subagent`（默认推荐）→ 执行型技能分派给独立子 agent
@@ -107,23 +113,23 @@ export DEV_FLOW_MODEL="your-provider/your-model"
 
 ## 打包给其他团队/仓库使用
 
-dev-flow-skills 是自包含的。**模型配置在初始化时完成**，无需手动设置环境变量：
+dev-flow-skills 是自包含的，模板与具体模型配置分开：
 
 ```bash
 # 1. 复制整个文件夹到目标位置
 cp -r dev-flow-skills /path/to/target/
 
 # 2. 在目标仓库运行 /init-dev-flow
-#    它会列出你已配置的模型供选择，存入 docs/agents/execution-mode.md
+#    配置 tracker、提交策略、执行模式，并引导选择基础模型
 
-# 3. 生成 agent 文件（自动读取配置的模型）
+# 3. 生成 agent 文件
 cd /path/to/target/dev-flow-skills
-./adapters/build.sh all
+./adapters/build.sh all --project-root /path/to/target
 ```
 
-**注意：** 如果目标环境没有运行 `/init-dev-flow`，`build.sh` 会使用默认模型 `anthropic/claude-sonnet-4`。可通过 `export DEV_FLOW_MODEL="..."` 临时覆盖。
+使用者接入时完成自己的模型选择；分发模板时无需预填模型名或供应商配置。
 
-## 图示（架构图 / 时序图 / 泳道图）
+## 图示（功能流程图 / 架构图 / 时序图 / 泳道图）
 
 流程中的关键节点会生成 **Mermaid 图**（提炼自 archify 的语义契约）。Mermaid 源码是纯文本、可进 git diff，且 GitHub/飞书/VS Code 会原生渲染成图 —— agent 读时是结构化文本，人看时是图。规范见 `_agents/diagram-guide.md`。
 
@@ -135,7 +141,7 @@ cd /path/to/target/dev-flow-skills
 | 调用时序、同步/异步、返回、安全边界 | `sequenceDiagram` | spec 的端到端调用流 |
 
 - **项目架构图**：`/init-dev-flow` 时生成到 `.scratch/architecture.md`（已有代码的仓库），`flowchart` + `subgraph` 泳道，帮 agent 快速理解项目。示例见本仓库的 [`architecture.md`](./architecture.md)
-- **模块影响图**：嵌入 spec，`flowchart` 标注 `[新增][修改][不动]`
+- **功能流程图**：嵌入 spec 的“方案概述”，`flowchart` 展示业务入口、用户动作、条件分支与结果；模块影响继续用文字清单记录
 - **端到端时序图**：嵌入 spec，`sequenceDiagram` 用 `->>`（同步）/`-->>`（返回）/`-)`（异步）
 
 **设计原则：变体即语义。** 图型、箭头、判断节点承载含义而非装饰；标签是语义数据，不为排版删除。
@@ -157,6 +163,7 @@ dev-flow-skills/
 ├── architecture.md           # 自身架构示例（mermaid）
 ├── _agents/                  # 执行型子 agent 的 prompt 源
 │   ├── README.md
+│   ├── workflow-contract.md  # 共享字段、状态和简化流程
 │   ├── diagram-guide.md      # 图示规范（非 agent）
 │   ├── exporter.prompt.md
 │   ├── simplifier.prompt.md
@@ -166,6 +173,7 @@ dev-flow-skills/
 ├── adapters/                 # 跨工具适配
 │   ├── build.sh
 │   └── codex/README.md
+├── tests/                    # 适配脚本检查与流程场景
 ├── init-dev-flow/
 │   └── SKILL.md
 ├── grill-with-docs/
@@ -193,3 +201,12 @@ dev-flow-skills/
 └── to-api-contract/
     └── SKILL.md
 ```
+
+## 验证
+
+```bash
+bash -n adapters/build.sh
+python3 -B -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+自动测试使用临时目录验证目标参数、用户模型配置与覆盖优先级、未配置时无内置模型、工作目录独立性和生成提示词保真，不写用户级 agent 目录。技能决策的行为走查见 [`tests/workflow-scenarios.md`](./tests/workflow-scenarios.md)，不以关键词检查代替实际执行。

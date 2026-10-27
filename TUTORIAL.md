@@ -26,7 +26,8 @@
 | 新仓库首次接入 | `/init-dev-flow` | 三项配置（tracker / 提交策略 / 执行模式） |
 | 需求在脑子里，怕 agent 理解错 | `/grill-with-docs` | 对齐后的需求 + CONTEXT.md |
 | 需求已对齐，需要方案文档 | `/to-spec` | spec（含 seams 分析 + mermaid 图），存入 tracker |
-| spec 已确认，需要拆分执行 | `/to-tickets` | 带依赖关系的 ticket 列表 |
+| spec 已确认，需要确定技术路径 | `/to-plan` | 技术决策、包分解、改动锚点与验证策略，经用户批准 |
+| plan 已批准，需要拆分执行 | `/to-tickets` | 带依赖关系的 ticket 列表；单票小改动可明确省略 plan |
 | ticket 已确认，开始写代码 | `/implement` | 可运行代码 + 测试 |
 | 已实现 spec 有变动 | `/amend` | spec-v(N+1) + 更新 INDEX + 新 ticket |
 | 想查看当前进度 | `/find` | 只读进度快照：阶段、Status、阻塞、下一步 |
@@ -47,7 +48,7 @@
 |------|------|------|--------|
 | tracker 类型 | `issue-tracker.md` | GitHub / GitLab / 本地 `.scratch` | **探测**：git remote + gh/glab CLI + .scratch 是否已存在 |
 | 提交策略 | `commit-strategy.md` | per-ticket / squash | **探测** git log + 向你确认 |
-| 执行模式 | `execution-mode.md` | subagent / inline | **询问**（无可靠探测方式） |
+| 执行模式与基础模型 | `execution-mode.md` | subagent / inline；分派时使用的基础模型 | **询问**执行模式；subagent 模式列出实际可用模型，用户选择 ID 或 inherit |
 
 ### 执行
 
@@ -69,13 +70,15 @@ Agent 探测后报告判定，例如：
 - 执行模式: 默认派子 agent 吗？（A 派 / B 主会话直接做）
 ```
 
+选择分派后，Agent 根据当前工具的实际模型列表引导选择，或由你明确选择继承当前主会话（`inherit`），写入 `execution-mode.md` 的“基础模型”。模板不预填具体模型。Pi 生成 agent 时读取该项目配置；其他工具分派时按支持的格式应用，尚未实际调用的模型明确标注运行未验证。
+
 ### 产出
 
 ```
 docs/agents/
 ├── issue-tracker.md    # tracker 类型（单一事实源）
 ├── commit-strategy.md  # 提交策略（simplify 触发时机）
-└── execution-mode.md   # 执行模式（是否默认派子 agent）
+└── execution-mode.md   # 执行模式 + 用户确认的基础模型
 .scratch/README.md      # 本地模式才有
 AGENTS.md               # 根目录指针（新开发者/agent 一眼可见）
 ```
@@ -140,7 +143,7 @@ Agent：明确了。嵌套层级限制？
 
 Agent 先读 `docs/agents/issue-tracker.md` 判断 tracker 模式，然后：
 1. **Seams 分析** — 确定测试边界，优先用最高层现有 seam，向你确认
-2. 合成**四段式 spec**：问题陈述 / 非目标 / 方案概述（含 seams 与关键决策）/ 模块影响
+2. 合成**四段式 spec**：问题陈述 / 非目标 / 方案概述（含功能流程图、seams 与关键决策）/ 模块影响文字清单；调用时序图继续说明跨参与者交互
 3. 按 tracker 模式存放：
    - 本地 → `.scratch/<feature-slug>/spec.md`
    - GitHub/GitLab → 创建 issue
@@ -149,7 +152,28 @@ Agent 先读 `docs/agents/issue-tracker.md` 判断 tracker 模式，然后：
 
 ### 产出
 
-- spec（含约定的 test seams），存入 tracker
+- spec（含功能流程图、约定的 test seams 和调用时序图），存入 tracker
+
+---
+
+## 阶段 2.5：实施蓝图 — `/to-plan`
+
+spec 确认后，把技术决策、实现路径与风险在 plan 中确定，再拆执行票。
+
+```
+/to-plan
+```
+
+Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`；GitHub/GitLab 创建或更新独立 Plan issue，现行方案写在正文：
+
+- 技术决策表：选项、选择与理由
+- 包分解 P1..Pn：交付物、技术路径、复用点和风险
+- 改动锚点：现有挂接点与目标态分别标明，说明由哪一阶段生成目标态
+- 全局验证策略，以及方案的批准状态
+
+现有挂接点在开工前核实；目标态在负责生成它的 ticket/前置包完成后检查。plan 由你 review 批准后进入拆票，已有会话授权直接沿用。plan 就地维护，方法名不复制进 ticket。
+
+远程 Plan issue 正文用 `Spec:` 关联当前执行版，Spec 正文用 `Plan:` 反向引用；拆票后 Plan 列出关联 tickets。评论记录讨论和批准依据，open/closed 不代替批准状态。草案先保存为待 review，批准后更新同一正文，不把现行 plan 放进 Spec 评论或另存本地副本。
 
 ---
 
@@ -157,7 +181,7 @@ Agent 先读 `docs/agents/issue-tracker.md` 判断 tracker 模式，然后：
 
 ### 何时进入
 
-- 阶段 2 完成，spec 已确认
+- 阶段 2.5 完成，plan 已批准；或单票小改动已明确省略 plan
 - 工作量超过一个会话容量
 
 ### 执行
@@ -168,11 +192,13 @@ Agent 先读 `docs/agents/issue-tracker.md` 判断 tracker 模式，然后：
 
 Agent 会：
 1. **识别 prefactoring 机会** — 在写新功能前，先重构让变更更容易（"Make the change easy, then make the easy change"）
-2. 拆成 **tracer-bullet 垂直切片**（每片端到端可独立验证，含 schema/API/UI/测试）
-3. 声明 **blocking 依赖**
+2. 按 plan 包拆成 **tracer-bullet 垂直切片**（每片端到端可独立验证）
+3. 使用 `Spec:` / `Plan:` 分别引用 spec 版本和 plan 包，依赖统一写 `Blocked by:`
 4. 向你确认粒度和依赖，然后按 tracker 模式存放：
    - 本地 → `.scratch/<feature-slug>/issues/<NN>-<slug>.md`（从 01 编号，blocker 在前，绝不合并成单文件）
    - GitHub/GitLab → 每张 ticket 一个 issue
+
+远程票分别写 `Spec: <Spec 版本引用>`、`Plan: <独立 Plan issue> / P<N>`，创建后回填 Plan 的关联清单。本地文件引用格式继续使用 `plan.md#P<N>`。
 
 **这是交互型技能，留在主会话。**
 
@@ -181,11 +207,14 @@ Agent 会：
 ```
 .scratch/blog-comments/
 ├── spec.md
+├── plan.md
 └── issues/
     ├── 01-prefactor-extract-content.md
     ├── 02-comment-model-api.md
     └── 03-nested-replies.md
 ```
+
+**单票小改动：** 可以写 `Plan: none (单票小改动)`，必要时也可写 `Spec: none (原因)`。必要技术决策、产品边界、测试 seam 与验收标准收在已确认的 ticket 中，下游不再要求读取被省略的文档。字段格式和状态语义统一见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md)。
 
 ---
 
@@ -212,10 +241,10 @@ Agent 会：
   ├─ 1. 选 ticket（blocker 已解）          │
   │      （多版本 feature 先读 INDEX.md     │
   │        确定当前 spec 版本）             │
-  ├─ 2. 确认测试 seam（读 spec）           │
+  ├─ 2. 确认验证方式与已有测试落点         │
   ├─ 3. 分派 ──────────────────────────→  implementer
   │                                       │  · 确认 blocker 已解
-  │                                       │  · 在约定 seam 红-绿-重构
+  │                                       │  · 复用测试，按改动类型实施与验证
   │                                       │  · 自 review（Standards+Spec+P0/P1/P2）
   │                                       │  · 返回结构化报告
   ├─ 3.5 方向修正（若 implementer 报        │
@@ -226,11 +255,13 @@ Agent 会：
   │      └─ 重新分派（≥2 次则停，人工介入）  │
   ├─ 4. 核对报告 ←────────────────────────┘
   │      （验收标准全满足？测试通过？）
+  │      ├─ 适用检查通过 → code-complete，更新依赖
+  │      └─ 涉及端点 → 生成契约，供下一票联调
   ├─ 5. 提交节点（读 commit-strategy）
   │      ├─ 分派 simplify 清理
   │      ├─ 人工 checkpoint（你确认）
   │      └─ 提交
-  └─ 6. 涉及端点？→ 分派 contract-writer 产出契约
+  └─ 6. 必需验收 + 收尾 checkpoint 完成 → resolved
 ```
 
 **关键边界：**
@@ -239,7 +270,10 @@ Agent 会：
 - **子 agent 遇到未覆盖的决策会停止并报告**，不猜测、不扩大范围（决策已在 spec/ticket 阶段拍死）
 - **子 agent 报"方向错误"（ticket 方案在现有架构不成立）会触发 Step 3.5**：主会话对齐架构 → 修正 ticket → 按层级判断是否回写 spec → 重新分派；同一 ticket 连续 ≥2 次方向错误则停，转人工
 - **绝不主动提交**：即使全部检查通过，也先停在人工 checkpoint，经你确认才提交
-- **execution-mode=inline 时**，主会话参照 `_agents/implementer.prompt.md` 直接执行同样的 TDD 逻辑，不重启子进程
+- **提交与依赖分别处理**：每票自动验证通过即可记 `code-complete` 并继续下游；squash 不要求先提交上游票。待人工/真机验收项保留记录，最终验收与 checkpoint 完成后才 `resolved`
+- **execution-mode=inline 时**，主会话参照 `_agents/implementer.prompt.md` 执行同样的实现与验证规则，不重启子进程
+
+验证方式在执行前确定：业务行为与 bug 在已有测试中先复现再实现；纯重构跑前后回归；文档、配置和样式使用适用检查。同一测试边界的多个场景复用文件、fixtures 与参数化，不按票据另起测试文件。一次性探针放系统临时目录，有长期价值的回归覆盖仍保留；必要检查失败或未运行时不能报完成。
 
 ### 产出
 
@@ -272,7 +306,7 @@ Agent 会：
 
 **已实现 spec 有变动时使用，不重走全流程。**
 
-只 grill 变动部分 → 深度判断（表层/局部增量 vs 核心重做）→ 生成 `spec-v(N+1).md`（只记变动点）→ 更新 `INDEX.md` 版本指针 → 续接 ticket。旧 spec 冻结，agent 实现一律先读 INDEX 确定当前版本。
+只 grill 变动部分 → 判断增量或重做 → 保存增量 Spec、更新当前版本引用 → 更新同一 plan 正文 → 续接 ticket。旧 Spec 冻结；本地用版本文件与 INDEX，远程沿用 tracker 的 Spec 版本约定并同步 Plan issue 的 `Spec:`，不新建 Plan issue。业务路径变化时更新功能流程图，模块影响保留文字说明。
 
 ### `/export-session` — 导出会话
 
@@ -306,19 +340,17 @@ Day 4 全天
     ▼
 /implement（逐 ticket）
     │
-    ├─ ticket 01: 分派 implementer → 红绿重构 → 报告 → 核对
-    │     （squash 策略，暂不提交）
-    ├─ ticket 02: 同上
-    ├─ ticket 03: 同上
+    ├─ ticket 01: 红绿重构 → 核对 → code-complete，解除 02 的 ticket 依赖
+    │     （squash 策略，暂不提交，最终验收项仍保留）
+    ├─ ticket 02: 同上；涉及端点则立即生成契约
+    ├─ ticket 03: 同上；使用前票的代码与契约
     │
-    ▼ 全部 ticket 完成，进入统一提交节点
+    ▼ 执行票均 code-complete/resolved，进入统一收尾节点
   分派 simplify（scope=累计 diff）→ 修复报告
     │
     ▼ 人工 checkpoint：你确认
-  统一提交
-    │
-    ▼ ticket 02/03 涉及端点
-  分派 contract-writer → .scratch/blog-comments/contracts/*.md
+  必需验收通过 → resolved；经明确授权统一提交
+  若选择暂不提交，记录选择并保留工作区；待验收项不标 resolved
 ```
 
 ### 产出文件树
@@ -353,13 +385,14 @@ project/
 | 约束 | 说明 |
 |------|------|
 | 先初始化 | 没有 `docs/agents/*.md`，to-spec/to-tickets/implement 会提示先跑 `/init-dev-flow` |
-| 阶段顺序 | grill → spec → tickets → implement，不能跳 |
-| 产出物即输入 | 上一阶段产出是下一阶段输入（spec → tickets → 代码） |
-| 决策前置 | 所有决策在 spec/ticket 阶段拍死，implement 阶段不做新决策 |
+| 阶段顺序 | 常规 feature：grill → spec → plan（批准）→ tickets → implement；小改动按共享约定明确省略 |
+| 产出物即输入 | spec → plan → tickets → 代码；简化票包含被省略文档中的必要决策 |
+| 决策前置 | 产品边界在 spec，技术方案在 plan，执行验收在 ticket；省略文档时决策收在 ticket |
+| 状态与提交 | 每票验证后更新 code-complete 与依赖；最终验收和 checkpoint 完成才 resolved，不由 squash 提交时点决定 |
 | 子 agent 边界 | 不提交、不跑 simplify、遇未授权决策停止并报告、报方向错误触发 Step 3.5 |
 | 绝不主动提交 | 任何阶段、任何 agent，未经你明确指示都把改动留在工作区 |
 | 配置可覆盖 | 三项配置都是默认值，单次执行可临时改 |
-| 交互型留主会话 | grill/diagnosing/spec/tickets 需要和你对话，不派子 agent |
+| 交互型留主会话 | grill/diagnosing/spec/plan/tickets 需要和你对话，不派子 agent |
 
 ---
 
@@ -367,4 +400,5 @@ project/
 
 - 技能定义：各 `<skill>/SKILL.md`
 - 执行逻辑：`_agents/*.prompt.md`
+- 共享字段与状态语义：`_agents/workflow-contract.md`，目标仓库的状态值域以 tracker 声明为准
 - 跨工具适配：`adapters/build.sh`（生成 agent 文件到各工具）

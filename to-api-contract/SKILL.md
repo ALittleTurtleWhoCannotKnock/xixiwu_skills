@@ -38,6 +38,8 @@ description: 在后端 ticket 完成时，产出该 ticket 涉及端点的接口
 
 **先读执行模式：** 读取 `docs/agents/execution-mode.md`。缺失或内容无法识别（非 `subagent`/`inline`，如被改坏）时默认 `subagent` 并提示用户检查配置。用户可在单次执行时覆盖默认。
 
+分派时按[共享执行约定的基础模型规则](../_agents/workflow-contract.md#基础模型)读取并应用用户选择；inline 模式沿用主会话。
+
 **默认 / `subagent` 模式 → 分派给 `contract-writer` 子 agent**，传入：
 - ticket id/slug 与验收标准
 - feature slug（用于输出路径）

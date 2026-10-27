@@ -3,9 +3,10 @@
 这里存放执行型子 agent 的**纯 system prompt**，不含任何工具特有的 frontmatter。
 
 - 每个 `.prompt.md` 是一个执行型 agent 的完整指令
-- `diagram-guide.md` 是文本图规范（架构图/时序图/泳道图），供 init、spec 等生成图示时参照，不是独立 agent
+- `workflow-contract.md` 定义共享票据字段和状态语义；主会话传给 implementer，Pi/Claude Code 生成文件时自动附带，不是独立 agent
+- `diagram-guide.md` 是功能流程图、架构图、时序图与泳道图规范，供 init、spec 等生成图示时参照，不是独立 agent
 - `adapters/<tool>/` 下的文件用对应工具的 frontmatter 包装同一份 prompt
-- 改 prompt 只改这里；改工具配置（模型、工具白名单）只改 adapters
+- 改 prompt 只改这里；thinking、工具白名单等适配配置放在 adapters，基础模型由使用者接入时选择并记录在项目 execution-mode.md，适配器或单次分派读取使用
 
 ## Agent 一览
 
@@ -14,7 +15,7 @@
 | `exporter.prompt.md` | export-session | 格式转换 | 完全自治 |
 | `simplifier.prompt.md` | simplify | 代码清理 | 完全自治 |
 | `contract-writer.prompt.md` | to-api-contract | 契约提取 | 完全自治 |
-| `implementer.prompt.md` | implement（单张 ticket） | TDD 执行 | 完全自治（决策前置） |
+| `implementer.prompt.md` | implement（单张 ticket） | 实现与验证，行为改动优先 TDD | 完全自治（决策前置） |
 | `scout.prompt.md` | to-spec / to-tickets 的代码侦察 | 侦察（只读） | 完全自治 |
 
 > `diagram-guide.md` 是图示规范（mermaid），供 init/spec 生成图时参照，**不是独立 agent**，不在 adapters 生成。

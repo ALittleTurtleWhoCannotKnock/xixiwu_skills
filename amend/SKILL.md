@@ -19,21 +19,23 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 2. **深度判断是闸门** — 区分"增量"和"重做"，防止小改掩盖该重做的大变
 3. **旧 spec 冻结** — 新版本独立成文（spec-v2.md），不覆盖历史
 4. **最新优先** — agent 默认读最新版本，旧版本按需追溯
-5. **plan.md 就地更新（不叠版本）** — 技术方案的演进不新开 plan-vN，直接改 plan.md 现状；"为什么变"追溯留在 spec 的 amend 记录，"现在怎么做"以 plan 现状为准
+5. **plan 就地更新（不叠版本）** — 本地改同一 plan.md，远程改同一独立 Plan issue 正文；不新开 plan-vN，不将现行方案追加到 Spec 评论
 6. **变动先论证** — 深度判断前，对"这次变动的真实意图"做一次轻量钢人论证（重述 → 双向 → 找关键变量），避免把表面小改当作增量、漏看背后的核心动摇。"关键"按全局 AGENTS.md 的判定标准（跨模块影响 / 多方案权衡 / 影响非目标 / 与架构冲突 / 改用户可见行为 / 不可逆）
 
 ## 操作步骤
 
 ### Step 1: 读取现状（主会话）
 
+先读 [共享执行约定](../_agents/workflow-contract.md)，新票分别记录 `Spec:` 与 `Plan:`，依赖使用 `Blocked by:`，状态以 tracker 声明为准。
+
 读取 `docs/agents/execution-mode.md`（缺失则视为"派子 agent"），确定后续 scout 是否派子 agent。
 
-读取 `.scratch/<feature>/` 的现有内容：
+先读 tracker。本地模式读取 `.scratch/<feature>/`：
 - `INDEX.md`（若存在）→ 确定当前最新版本
 - 最新 spec（`spec-vN.md` 或 `spec.md`）
 - `issues/` 现有 ticket 编号（用于续接）
 
-若 `.scratch/<feature>/` 不存在，提示"该 feature 没有 spec，请走 `/grill-with-docs` 正常流程"。
+远程模式读取当前 Spec 版本、其关联的独立 Plan issue 和 tickets，以 tracker 声明的版本引用与 Plan 正文 `Spec:` 核对当前执行层；不要因没有 `.scratch` 而认定缺少 Spec。两种模式都没有可定位的 Spec 时，提示走正常需求流程。
 
 ### Step 2: grill 变动内容（主会话，交互型）
 
@@ -70,7 +72,7 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 
 ### Step 4: 生成新版本 spec（主会话）
 
-**增量变动** → 生成 `spec-v(N+1).md`：
+**增量变动** → 本地生成 `spec-v(N+1).md`；远程按 tracker 既有版本约定保存新 Spec 并保留旧版引用，不自行改换 Spec 的版本存放方式。正文结构如下：
 
 ```markdown
 # <Feature> Spec v(N+1)
@@ -85,7 +87,10 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 | [决策] | [原方案] | [新方案] | [为什么变] |
 
 ### 变动的模块影响
-[用 [新增][修改][不动] 标注，参照 diagram-guide]
+[文字列出新增/修改/不受影响的模块与原因]
+
+### 变动的功能流程（如涉及）
+[参照 diagram-guide，用 flowchart 画受影响的业务路径、判断与结果，标明与原流程的衔接；无变化时明确沿用旧版流程]
 
 ### 变动的时序（如涉及）
 [参照 diagram-guide 时序图规范，只画受影响的调用段]
@@ -98,9 +103,9 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 
 **关键：** v(N+1) 只记变动点 + 明确"不变的部分沿用 v(N)"，不复制全文。这样保持文件精炼。
 
-### Step 5: 更新 INDEX.md（主会话）
+### Step 5: 更新当前版本引用（主会话）
 
-`.scratch/<feature>/INDEX.md` 不存在则创建，存在则更新：
+本地 `.scratch/<feature>/INDEX.md` 不存在则创建，存在则更新：
 
 ```markdown
 # Feature: <feature>
@@ -113,24 +118,26 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 - v(N+1) (spec-v(N+1).md): [本次变动概括]（进行中）
 ```
 
-**规则：** "当前版本"永远指向最新 spec。agent 实现时先读 INDEX 确定读哪个版本。
+远程更新 tracker 既有的当前版本引用，并在 Step 5.5 同步独立 Plan issue 的 `Spec:`；不额外创建本地 INDEX 主存。若 tracker 没有可定位版本的约定，先报告缺失，不用最新评论或 issue 编号猜测。
 
-**并发保护：** 写入 INDEX 前，先重读一次，确认"当前版本"仍等于 Step 1 读取时的版本（spec-vN）。若已被其他 amend 改成了更新的版本（spec-vM, M>N），说明有并发变更，**停止写入**，向用户报告冲突（"INDEX 已被另一次 amend 更新到 vM，请先对齐再重试"），不要覆盖掉别人的更新。
+**规则：** 当前版本引用指向本次确认的 Spec；实现方按该引用及 Plan 的 `Spec:` 定位执行版。
 
-### Step 5.5: 就地更新 plan.md（若存在）
+**并发保护：** 写入前重读 INDEX 或远程当前版本引用及 Plan 的 `Spec:`，确认仍为 Step 1 读取的版本；发生并发变化则停止覆盖，列出原值与现值并报告冲突。
 
-技术方案演进时，**直接修改 `.scratch/<feature>/plan.md`**（不新开 plan-vN）：
+### Step 5.5: 就地更新现行 plan（若存在）
+
+技术方案演进时，本地修改同一 `plan.md`，远程按 `Plan:` 引用修改同一独立 Plan issue 正文（不新开 plan-vN）：
 
 - 技术决策表：新增/修订本次变动涉及的决策行，理由栏注明"源于 v(N+1) [变动点]"
 - 包分解：受影响的 P 条目改写技术路径/风险点；**改动锚点随方法改名/重构同步更新**（锚点是定位事实源，腐化前主动修，别等 implementer 报错）；全新工作包续接编号（P(N+1)…）
-- 若变动的是产品边界而非技术方案 → plan 不动，只 spec 冻结新版本
+- 若只变产品边界而技术方案未变 → 技术正文沿用，仍将 plan 的 `Spec:` 引用更新到本次 Spec 版本
 - plan 头部加一行变更戳记：`> 更新：v(N+1) [日期] [一句话]`（保留演进线索，正文保持现行状态）
 
-新 ticket 引用更新后的 plan 条目（`**来源**: plan P<N>`）。
+新票的 `Plan:` 引用同一本地 plan 或同一 Plan issue 中的 P<N>。保留锚点生成阶段；本次方案已有明确授权时沿用，超出原批准范围的技术决策需先完成对应 review，再更新正文批准状态；评论只记录依据与讨论。
 
 ### Step 6: 续接 ticket（主会话）
 
-在 `.scratch/<feature>/issues/` 生成新 ticket，**编号续接**（现有最大编号 +1），新 ticket 初始为 `Status: ready`，不动旧 ticket 的 resolved 状态：
+本地在 `.scratch/<feature>/issues/` 生成新 ticket，**编号续接**（现有最大编号 +1）；远程创建独立 ticket issues，使用平台返回的编号并回填同一 Plan issue。新票初始为 `Status: ready`，不改旧票的 resolved 状态。本地示例：
 
 ```
 issues/
@@ -140,20 +147,20 @@ issues/
 └── 04-yyy.md  (新，ready)   ← 本次变动
 ```
 
-新 ticket 头部标注来源版本：`**来源**: spec-v(N+1)`。依赖关系按 tracer-bullet 规则声明（多数情况下新 ticket 依赖已实现的旧 ticket）。
+新票分别记录本次 `Spec:` 版本与 `Plan:` 包引用；本地如 `spec-v(N+1).md` / `plan.md#P<N>`，远程如 `<Spec 版本引用>` / `<Plan issue> / P<N>`。不需要 plan 时写 `Plan: none (原因)` 并补齐决策；依赖用 `Blocked by:` 声明。
 
 ### Step 7: 实现（进入 /implement）
 
 新 ticket 就绪后，走正常 `/implement` 流程。implementer 实现时：
-- 先读 INDEX 确认当前版本 spec-v(N+1)
+- 先读本地 INDEX 或远程当前版本引用，并核对 Plan 的 `Spec:`
 - 读 v(N+1)（变动点）+ 必要时回溯 v(N)（背景）
 
 ## 产出物
 
-- `spec-v(N+1).md` — 增量变动的新版本 spec（只记变动点）
-- 更新的 `INDEX.md` — 当前版本指针 + 演进摘要
-- 就地更新的 `plan.md`（若涉及技术方案演进，不叠版本）
-- 续接编号的新 ticket — 待实现（标 `**来源**: spec-v(N+1)` 或 `plan P<N>`）
+- 新版本 Spec — 本地文件或 tracker 中可定位的版本（只记变动点）
+- 更新的当前版本引用与演进记录（本地为 `INDEX.md`）
+- 就地更新的 plan 文件/独立 issue 正文，不叠版本
+- 续接编号的新 ticket — 待实现（分别记录 `Spec:` 与 `Plan:`，来源不混写）
 
 ## 边界
 
@@ -165,7 +172,7 @@ issues/
 
 ## 与其他技能的关系
 
-- **输入**：`.scratch/<feature>/` 已有的 spec + tickets
+- **输入**：tracker 中可定位的现有 Spec、Plan 与 tickets
 - **深度判断为"核心"时** → 转 `/to-spec`（重新走流程）
 - **新 ticket 就绪后** → `/implement`（正常实现流程）
 - **scout**：Step 1 如需重新理解当前代码状态，可按 execution-mode 分派 scout
