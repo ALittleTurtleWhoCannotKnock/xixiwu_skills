@@ -1,58 +1,62 @@
 ---
 name: init-dev-flow
-description: 初始化仓库的开发流程配置。由 agent 自动探测 tracker 类型（GitHub / 本地 .scratch），生成声明文件，让新开发者和 agent 进入仓库即可知道 issue 在哪。每个仓库运行一次。
+description: "Initialize or complete repository workflow setup: discover the tracker, confirm commit strategy, execution mode/base model, and interaction/artifact languages. Preserve existing choices and fill only missing settings."
 ---
 
 # Init Dev Flow
 
-初始化仓库的 issue tracker 配置与声明，让任何 agent 进入仓库后能立刻判断 issue 在哪。
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-## 触发信号
+Initialize repository workflow declarations so an entering agent can locate the tracker immediately.
 
-- 新仓库首次使用 dev-flow-skills
-- 仓库缺少 `docs/agents/issue-tracker.md`
-- 用户说"初始化流程"、"初始化这个仓库"
+## When to use
 
-## 核心 Discipline
+- A repository first adopts dev-flow-skills.
+- `docs/agents/issue-tracker.md` is missing.
+- The user requests initialization.
+- An existing repository needs missing/updated interaction or artifact language preferences.
 
-1. **探测而非询问** — agent 自动判断 tracker 类型，不把选择题抛给用户
-2. **单一事实源** — tracker 类型只在一个文件声明，其他文件放指针，避免不一致
-3. **新开发者可见** — 声明必须放在 agent 进入陌生仓库也会看到的位置
-4. **避免双写** — 一个仓库只用一个 tracker，GitHub 和 .scratch 不同时作为主存
+## Core disciplines
 
-## 操作步骤
+1. Discover the tracker from the environment; confirm missing language, commit, and execution preferences rather than replacing explicit choices.
+2. Keep the tracker declaration authoritative, with pointers elsewhere.
+3. Put discoverable pointers in the repository's entry instructions.
+4. Use one tracker master, not GitHub and `.scratch` simultaneously.
 
-### Step 1: 探测现状
+## Workflow
 
-依次检查，**不要假设**：
+### Step 1: Inspect existing state
+
+Check in order; do not assume:
 
 ```
-- docs/agents/issue-tracker.md 存在？
-  → 读取现有配置。若 execution-mode 为 subagent 但缺少基础模型，仅进入 Step 3e 补齐模型引导，保留 tracker、提交策略和已确认的执行模式；否则报告"已初始化：<模式>"，结束
-- git remote -v 的输出：指向 GitHub / GitLab / 无 remote？
-- gh CLI 可用且已登录（gh auth status）？
-- .scratch/ 目录已存在？（可能之前手动建过）
-- 根目录有 CLAUDE.md 还是 AGENTS.md，还是都没有？
+- Does docs/agents/issue-tracker.md already exist?
+  -> Read its tracker, commit strategy, execution mode/base model, and language.md; do not reset choices.
+  -> For missing/requested language fields, run only Step 2.5 to fill/update them.
+  -> For a missing execution mode or missing subagent base model, run only Step 3e; complete Step 2.5 first when language is also missing.
+  -> Partial setup does not repeat tracker detection, unrelated declarations, or architecture generation. Report actual additions and stop; if everything is complete and no update was requested, report already initialized and stop.
+- What does git remote -v identify: GitHub, GitLab, or no remote?
+- Is the relevant CLI available/authenticated (gh auth status / glab auth status)?
+- Does .scratch already exist?
+- Which root instruction file exists: CLAUDE.md, AGENTS.md, or neither?
 ```
 
-### Step 2: 判定 tracker 模式
+### Step 2: Determine the tracker
 
-按探测结果自动判定，**优先级从上到下**：
+Apply this priority order:
 
-| 条件 | 模式 | 说明 |
-|------|------|------|
-| `.scratch/` 已存在且有内容 | **本地模式** | 仓库已在用本地 tracker，直接补全声明 |
-| git remote 指向 GitHub 且 `gh` 可用且已登录 | **GitHub 模式** | 用 GitHub issues，不建 .scratch |
-| git remote 指向 GitLab 且 `glab` 可用且已登录 | **GitLab 模式** | 用 GitLab issues，不建 .scratch |
-| 无 remote / CLI 不可用 | **本地模式** | 初始化 .scratch |
+| Evidence | Mode | Action |
+|----------|------|--------|
+| `.scratch/` already contains work | Local | Preserve the existing tracker and complete its declaration |
+| GitHub remote, usable authenticated `gh` | GitHub | Use issues, without creating `.scratch` |
+| GitLab remote, usable authenticated `glab` | GitLab | Use issues |
+| No remote or no usable CLI | Local | Initialize `.scratch` |
 
-**探测边界情况处理：**
+If `.scratch` is empty, treat local tracking as uninitialized: add its README and tracker declaration without recreating existing directories.
 
-- **`.scratch/` 存在但为空** → 视为"未初始化本地 tracker"，按本地模式处理：补 `.scratch/README.md` + `docs/agents/issue-tracker.md`，不重复创建已有目录
-- **git remote 指向 GitHub/GitLab，但 CLI 未登录**（`gh auth status` / `glab auth status` 失败）→ **不静默降级**。提示用户："检测到 remote 是 GitHub，但 gh 未登录。请先 `gh auth login`，或确认改用本地模式。" 由用户选择，不替用户决定
-- **`gh`/`glab` 未安装** → 该 remote 模式的"CLI 可用"条件不满足，降级到本地模式，但报告中注明"remote 是 GitHub 但无 gh CLI，故用本地模式"
+An unauthenticated CLI for a GitHub/GitLab remote is **not silent permission to switch trackers**. Explain the login problem, offer login or an explicitly chosen local mode, and let the user decide. If the CLI is not installed, use the local fallback but disclose why.
 
-判定后向用户报告：
+Report the evidence and conclusion, for example:
 
 ```
 探测结果：
@@ -63,29 +67,49 @@ description: 初始化仓库的开发流程配置。由 agent 自动探测 track
 判定：本地模式（.scratch 已在用，优先于 remote 探测）
 ```
 
-如用户对判定有异议，允许其覆盖。
+The user may override the inferred mode.
 
-### Step 3: 生成声明文件
+### Step 2.5: Confirm and save languages
 
-#### 3a. 写 `docs/agents/issue-tracker.md`（单一事实源）
+Read the target repository's `docs/agents/language.md` under [language policy](../_agents/language-policy.md). Resolve interaction and artifact languages separately; they may match or differ. Reuse explicit existing choices without asking again.
 
-读取 [共享执行约定](../_agents/workflow-contract.md)。下列本地/GitHub/GitLab 模板均补入同一段状态与字段声明，以及该模式适用的归属与列表约定：
+- For unconfirmed preferences, suggest candidates from the conversation and existing business documents, then confirm both. A suggestion such as Chinese interaction/English artifacts is an example, not a built-in default.
+- Fill only missing fields. Do not re-ask complete confirmed settings. Task-specific language overrides remain temporary unless the user asks to change project defaults.
+- Until confirmation, keep the question pending and stop dependent file generation. Do not save guesses/placeholders or claim initialization is complete. One clear confirmation can cover both fields; a choice for one field is not confirmation of the other.
+- After confirmation, save explicit language names or codes (e.g. zh-CN/en) below. Keep the configuration header/keys fixed; localize explanation prose. Do not change tracker, commit, or model choices as a side effect.
+
+```markdown
+# Workflow language
+interaction_language: <用户确认的交互语言>
+artifact_language: <用户确认的业务产物语言>
+```
+
+New repositories continue to Step 3. Use interaction language for subsequent questions and artifact language for generated documents. In language-only updates, add/update only the root language pointer using Step 3c's file-selection rule and preserve other content. If a base model is also missing, complete Step 3e, otherwise report the partial update and finish. Changing defaults does not bulk-translate existing/frozen artifacts.
+
+### Step 3: Write declarations
+
+The templates retain fixed structure and protocol fields. Localize document prose under artifact language and user questions/reports under interaction language; preserve keys, state values, paths, and identifiers. Do not start this step before language confirmation.
+
+#### 3a: Write docs/agents/issue-tracker.md
+
+Read the [shared contract](../_agents/workflow-contract.md). Include the common state/field conventions below and the mode-specific ownership/navigation rules.
 
 ```markdown
 ## Ticket conventions
 
-- Status values: ready / claimed / code-complete / resolved / parked
+- Status values: ready / claimed / resolved / parked
 - ready = 待执行；claimed = 执行中或必要自动检查未通过
-- code-complete = 代码与必要自动检查通过，仍待最终验收/收尾 checkpoint；可解除 ticket 依赖，外部验证条件另验
-- resolved = 所有必需验收通过且收尾 checkpoint 已处理；parked = 搁置，不解除依赖
+- resolved = 本票实现、必要工程检查、审查和必需产物通过，自动关闭并解除票级依赖；parked = 搁置，不解除依赖
+- 人工功能验收集中到 Plan（无 Plan 时 Spec），使用 Acceptance: pending / accepted / changes-requested；票级关闭不等待该确认
+- 远程票同步实际 close 并复读状态；失败如实报告“工程完成 / 平台关闭未同步”，不谎报关闭成功
 - 每票使用 Status:、Parent:、Spec:、Plan:、Blocked by:；直接归属、spec 版本、plan 包和执行依赖分别记录
 - 小改动省略 spec/plan 时写 none (原因)，必要决策和测试边界记录在 ticket 中
-- Git 提交与验收状态分别记录；未获用户明确授权不得提交/推送
+- Git 提交、票级完成和功能验收分别记录；未获用户明确授权不得提交/推送，暂不提交不阻止票级关闭
 ```
 
-已有 tracker 保留其声明的值域与完成语义；需要采用中间态时先补齐 `code-complete` 的定义，不自动改写历史票的状态。
+When adopting the new closure flow in an existing tracker, update only relevant ticket/parent-acceptance conventions, retaining custom fields and historical states. Keep declared code-complete compatibility; do not bulk-close old tickets or downgrade mandatory engineering verification to human acceptance.
 
-**本地模式：**
+**Local template:**
 
 ```markdown
 # Issue tracker: Local Markdown
@@ -120,7 +144,7 @@ Create a new file under `.scratch/<feature-slug>/` (creating the directory if ne
 Read the file at the referenced path. The user will normally pass the path or the issue number directly.
 ```
 
-**GitHub 模式：**
+**GitHub template:**
 
 ```markdown
 # Issue tracker: GitHub
@@ -154,9 +178,9 @@ Create a GitHub issue with `gh issue create`.
 Use `gh issue view <number>`.
 ```
 
-**GitLab 模式：** 沿用独立产物、正文字段与状态约定，使用 `glab`。原生层级和展示按该平台实际能力处理，不复制 GitHub API、CLI 参数或 Projects 配置。
+For GitLab, retain separate artifacts, fields, and state semantics, using glab and the platform's actual hierarchy capabilities. Do not copy GitHub-specific API calls, flags, or Projects configuration.
 
-#### 3b. 本地模式额外：写 `.scratch/README.md`
+#### 3b: Add the local .scratch/README.md
 
 ```markdown
 # .scratch/
@@ -170,17 +194,13 @@ Use `gh issue view <number>`.
 创建 feature 后在此登记到 `<feature>/INDEX.md` 的链接；旧 feature 尚无索引时链接其目录。
 ```
 
-（如果 `.scratch/` 已存在，保留现有内容，只补 README。）
+Preserve an existing `.scratch` and its content; add the README as needed.
 
-#### 3c. 写指针到根目录声明文件
+#### 3c: Add repository-entry pointers
 
-**选择编辑哪个文件（按优先级）：**
+Select, in order: existing CLAUDE.md; otherwise existing AGENTS.md; otherwise create AGENTS.md.
 
-1. `CLAUDE.md` 已存在 → 编辑它
-2. 否则 `AGENTS.md` 已存在 → 编辑它
-3. 都没有 → 创建 `AGENTS.md`（更通用，Pi/Codex/Cursor 都认）
-
-**写入内容（追加 `## Agent skills` 区块，已存在则更新对应行）：**
+Append `## Agent skills` or update its relevant existing lines. Local example:
 
 ```markdown
 ## Agent skills
@@ -190,7 +210,7 @@ Use `gh issue view <number>`.
 Issues and specs live as local markdown under `.scratch/<feature-slug>/`, committed to the repo and shared with the team. The spec, plan (when produced), and per-ticket files live here. See `docs/agents/issue-tracker.md`.
 ```
 
-GitHub 模式则写：
+GitHub example:
 
 ```markdown
 ## Agent skills
@@ -200,17 +220,19 @@ GitHub 模式则写：
 Issues and specs live in GitHub Issues on this repo's remote. Use the `gh` CLI. See `docs/agents/issue-tracker.md`.
 ```
 
-**规则：** 指针只放一行 + 指向 issue-tracker.md，**不复制**结构约定详情（避免双写腐化）。
+Also add/update the language pointer. A language-only update changes this block, not existing tracker pointers or unrelated settings:
 
-### Step 3d: 配置提交策略
+```markdown
+### Workflow language
 
-提交策略决定 `/implement` 何时提交、以及 `/simplify` 何时触发。
+Use `docs/agents/language.md` for interaction and workflow-artifact languages; explicit task overrides apply only to that task.
+```
 
-**探测：** 用 `git log --oneline -20` 看历史提交粒度：
-- 历史多为小步多提（每条对应一个明确小改动）→ 推测 per-ticket
-- 历史多为大提交（一次含多个改动）→ 推测 squash
+Root instructions hold pointers, not copied language values or structural rules. Align conflicting language clauses only within the user's authorized language change. Report unmodifiable higher-priority conflicts rather than claiming the preference took effect.
 
-**询问确认（已有明确的提交策略时直接沿用）：**
+### Step 3d: Confirm commit strategy
+
+This determines commit timing in `/implement` and cleanup timing in `/simplify`. Inspect `git log --oneline -20`: many small scoped commits suggest per-ticket; larger combined changes suggest squash. Reuse an explicit choice; otherwise confirm the suggestion:
 
 ```
 根据 git 历史，推测你的提交习惯是：<推测结果>
@@ -220,41 +242,37 @@ A. 每张 ticket 完成后立即提交（per-ticket）
 B. 整个 feature 完成后统一提交（squash）
 ```
 
-**写入 `docs/agents/commit-strategy.md`：**
+Save `docs/agents/commit-strategy.md` using the chosen template.
 
-per-ticket：
+**per-ticket:**
 
 ```markdown
 # Commit strategy: per-ticket
 
-每张 ticket 达到 code-complete 后进入收尾 checkpoint，经用户明确授权再提交。
+每张 ticket 通过工程检查和审查后自动 resolved/关闭，再独立处理提交 checkpoint；人工功能验收留在 Plan/Spec，经用户明确授权才提交。
 
 - `/implement` 每票验证后更新状态与依赖，再独立处理该票的收尾和提交
 - `/simplify` 在每张 ticket 提交前触发，scope = 该 ticket 的未提交 diff
 - `/simplify` 修复后留人工 checkpoint，用户确认后才提交
 ```
 
-squash：
+**squash:**
 
 ```markdown
 # Commit strategy: squash
 
-整个 feature 的执行票达到 code-complete/resolved 后统一收尾，经用户明确授权再提交。
+整个 feature 的执行票自动 resolved/关闭后统一处理提交，经用户明确授权才提交；Plan/Spec 另行记录功能验收，不因票全关自动通过。
 
-- `/implement` 每票验证后更新 code-complete 与依赖，可继续下游票；不等待 Git 提交才解除依赖
+- `/implement` 每票工程验证和审查通过后 resolved/关闭并更新依赖，可继续下游票；不等待 Git 提交或人工功能验收
 - `/simplify` 在统一提交前触发，scope = feature 起点到工作区的累计 diff
 - `/simplify` 修复后留人工 checkpoint，用户确认后才提交
 ```
 
-**规则：** 提交策略是单一事实源，`/implement` 和 `/simplify` 都读此文件，不各自硬编码触发时机。
+This file is authoritative; implementation and simplification read it rather than hard-coding timing.
 
-### Step 3e: 配置执行模式与基础模型
+### Step 3e: Confirm execution mode and base model
 
-执行模式决定执行型技能（`/implement`、`/simplify`、`/to-api-contract`、`/export-session`）默认**是否分派给独立子 agent**。
-
-已有确认的执行模式时直接沿用，仅补齐缺失的基础模型；首次配置执行模式时再询问下列选项。
-
-**说明给用户：**
+This determines whether implementation, cleanup, contract extraction, and session export default to a child agent. Reuse a confirmed mode and fill only a missing base model. Ask about the mode only when it has not been selected:
 
 ```
 执行型任务（实现与验证、代码清理、契约提取、会话导出）可以：
@@ -267,18 +285,15 @@ B. 默认主会话直接做（小任务快）
 （无论选哪个，单次执行时都可以临时覆盖）
 ```
 
-**选 A 后引导配置基础模型：**
+For subagent mode, guide model selection:
+1. Read the existing execution-mode file and the current tool's actual available-model list. Reuse user choices. Never hard-code a provider/model or read/expose keys.
+2. Show available models and allow a full supported ID or explicit `inherit`. If enumeration is unavailable, disclose that and ask for a supported ID rather than choosing one.
+3. Save the confirmed choice in `**基础模型**:` below. `inherit` also requires explicit selection; a missing field is not completed setup.
+4. Check the choice against the available list. Without an actual invocation, report configuration saved/runtime unverified, not a successful call.
 
-1. 先读取已有 `execution-mode.md` 和当前工具可用的模型列表。已有用户选择可继续沿用；列表必须来自当前环境，不在模板里写死模型名或供应商，不读取或展示密钥。
-2. 展示实际可用的模型，让用户选择或输入完整模型 ID；同时提供“继承当前主会话模型（`inherit`）”。无法枚举模型时明确说明，请用户提供当前工具支持的 ID，不代选一个模型。
-3. 把确认结果写入下方的 `**基础模型**:` 字段。`inherit` 也需要明确记录；不能把未选择、字段缺失当作已经配置完成。
-4. 根据当前工具的模型列表核对所选 ID 是否可用。没有实际调用时，报告“配置已保存，运行未验证”，不虚报调用成功。
+Inline mode uses the main-session model and needs no separate child base model.
 
-inline 模式直接使用主会话模型，无需单独配置子 agent 基础模型。
-
-**写入 `docs/agents/execution-mode.md`：**
-
-选 A（派）：
+**Subagent template for docs/agents/execution-mode.md:**
 
 ```markdown
 # Execution mode: subagent
@@ -299,7 +314,7 @@ Pi agent 的 thinking 分级由 build.sh 控制；使用 `build.sh --project-roo
 **模型覆盖：** Pi 构建时可用 `DEV_FLOW_MODEL` 临时覆盖本项目选择；不提供固定默认模型。
 ```
 
-选 B（不派）：
+**Inline template:**
 
 ```markdown
 # Execution mode: inline
@@ -311,26 +326,17 @@ Pi agent 的 thinking 分级由 build.sh 控制；使用 `build.sh --project-roo
 **单次覆盖：** 用户可在单次执行时改为派子 agent（如"这个大 ticket 派给 implementer"）。
 ```
 
-**规则：** 执行模式是单一事实源，4 个执行型技能读此文件决定默认行为；两条路径（派 / 不派）都指向同一份 `_agents/*.prompt.md` 作为执行逻辑，只是执行主体不同。
+This file is authoritative for the four execution skills. Both modes follow the same `_agents/*.prompt.md`; only the executor changes.
 
-### Step 3f: 生成项目架构图（已有代码时）
+### Step 3f: Generate architecture when code exists
 
-项目级架构图是整个仓库的"地图"，独立于任何 feature，放 `.scratch/` 根目录。
+The repository architecture map is independent of any feature and lives at `.scratch/architecture.md`. Generate it for real existing modules/services. Skip empty/early repositories and explain that it can be generated once the first Spec and actual modules exist.
 
-**判断时机：**
-- 仓库已有代码（有实际的模块/服务）→ 立即生成
-- 空仓库或刚起步 → 跳过，告知用户"首个 spec 完成、有实际模块后可重新生成"
+Use scout according to execution-mode or inspect directly. Follow `_agents/diagram-guide.md`: Mermaid flowchart, subgraph boundaries/swimlanes, component type tags (`[frontend]`, `[backend]`, `[database]`), and one horizontal main flow. Use fenced mermaid. Maintain it as architecture changes; major regeneration is human-triggered or follows discovery of an outdated map.
 
-**生成方式：**
-- 按 execution-mode 分派 `scout` 侦察仓库结构（模块、入口、存储、外部依赖），或直接由主会话侦察
-- 用 **mermaid flowchart** 生成 `.scratch/architecture.md`（参照 `_agents/diagram-guide.md`）：用 `subgraph` 表达泳道/边界，组件带类型标记（`[frontend]`/`[backend]`/`[database]` 等），一条横向主流程
-- 用 ```` ```mermaid ```` 代码块包裹，GitHub/飞书可渲染成图
+### Step 4: Confirm and report
 
-**后续维护：** 架构随代码演进而变化。大变更后可重新生成（人工触发，或后续 spec 发现架构已过期时）。
-
-### Step 4: 确认并报告
-
-向用户展示写入的文件清单和关键内容，确认后完成：
+Show the actual changed files and key content. Do not copy conditional architecture/changelog entries from this illustrative list as if they had been generated. A language-only update reports only its actual changes.
 
 ```
 初始化完成（本地模式 + squash 提交 + 派子 agent）：
@@ -338,6 +344,7 @@ Pi agent 的 thinking 分级由 build.sh 控制；使用 `build.sh --project-roo
 ✅ docs/agents/issue-tracker.md   — tracker 类型声明（单一事实源）
 ✅ docs/agents/commit-strategy.md — 提交策略（simplify 触发时机）
 ✅ docs/agents/execution-mode.md  — 执行模式 + 用户确认的基础模型（subagent 模式）
+✅ docs/agents/language.md        — 用户确认的交互语言与业务产物语言
 ✅ .scratch/README.md             — 本地 tracker 说明
 ✅ .scratch/architecture.md       — 项目架构图（已有代码时）
 ✅ .scratch/<feature>/changelog.md — 小改动的记录兜底（小改动不必走 spec/plan/ticket）
@@ -347,28 +354,14 @@ Pi agent 的 thinking 分级由 build.sh 控制；使用 `build.sh --project-roo
 读 .scratch/architecture.md 可快速理解项目结构。
 ```
 
-## 产出物
+## Outputs
 
-| 模式 | 生成文件 |
-|------|---------|
-| 本地 | `docs/agents/issue-tracker.md` + `commit-strategy.md` + `execution-mode.md` + `.scratch/README.md` + 根目录指针 |
-| GitHub | `docs/agents/issue-tracker.md` + `commit-strategy.md` + `execution-mode.md` + 根目录指针 |
-| GitLab | `docs/agents/issue-tracker.md` + `commit-strategy.md` + `execution-mode.md` + 根目录指针 |
+All modes produce `docs/agents/issue-tracker.md`, commit-strategy.md, execution-mode.md, language.md, and repository-entry pointers. Local mode additionally produces `.scratch/README.md`; architecture is conditional.
 
-## 边界
+## Boundaries and consumers
 
-| 适合 | 不适合 |
-|------|--------|
-| 每个仓库首次接入 dev-flow-skills | 已有完整 issue-tracker.md 的仓库（直接读取即可，不重复初始化） |
-| 新开发者 onboarding | 临时单次任务（不必初始化，直接用 no-issue 流程） |
+Use for first setup, missing language/base-model preferences, or onboarding. A complete project with no update request should simply reuse declarations. A temporary single task need not initialize the whole workflow.
 
-## 与其他技能的关系
+Publishing skills read issue-tracker.md; `/implement` and `/simplify` read commit-strategy.md; `/export-session` uses tracker conventions for issue inference. All skills resolve language.md and pass effective languages plus the target repository to delegates. Source-instruction language does not choose output language. A missing tracker declaration requests `/init-dev-flow`.
 
-- 所有需要"发布到 tracker"的技能（`/to-spec`、`/to-plan`、`/to-tickets`）先读 `docs/agents/issue-tracker.md` 判断写去哪
-- `/implement` 和 `/simplify` 读 `docs/agents/commit-strategy.md` 决定提交与清理时机
-- `/export-session` 的 issue 推断也依赖此文件判断 issue 形态
-- 没有此文件时，技能应提示"先运行 /init-dev-flow"
-
-## 记录软硬规则（贯穿全流程）
-
-改动必须留记录（spec/plan/ticket/changelog 任一），但 spec/plan/ticket 按规模软选用。详见 `/to-tickets` 的"记录是硬需求（软硬规则）"表。**小改动不必走 ticket/plan/spec，但必须留记录**——init 生成的 changelog.md 即为兜底。
+Every change needs a traceable Spec/plan/ticket/changelog record, but artifacts scale with the change. Small work does not require a full ticket/plan/Spec; changelog is the fallback. See `/to-tickets` for the record rule.

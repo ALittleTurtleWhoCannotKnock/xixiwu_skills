@@ -1,39 +1,41 @@
 ---
 name: grill-with-docs
-description: 需求对齐技能。通过连续追问消除歧义，同时维护项目领域词典 CONTEXT.md。适用于新功能、复杂变更、多人协作场景。
+description: "Align requirements through focused questions and maintain the project glossary in CONTEXT.md. Use for new features, complex changes, or shared domain terminology."
 ---
 
 # Grill With Docs
 
-## 触发信号
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-- 用户描述了一个新功能或变更需求
-- 需求中存在歧义或隐含假设
-- 需要建立团队共享的领域语言
+## When to use
 
-## 核心 Discipline
+- The user describes a new feature or changed requirement.
+- Requirements contain ambiguity or unstated assumptions.
+- The team needs shared domain terminology.
 
-1. **追问直到无歧义** — 设计树的每个分支都必须有明确答案
-2. **识别领域术语** — 在对话中捕捉项目特有的概念和 jargon
-3. **维护 CONTEXT.md** — 将对齐后的术语定义写入项目文档
-4. **先重述真实问题** — 对关键需求/方案，先做一次轻量钢人论证（重述真正想解决的问题 → 双向论证 → 找关键变量），确认对齐的是"真问题"而非表面描述。"关键"按全局 AGENTS.md 的判定标准（跨模块影响 / 多方案权衡 / 影响非目标 / 与架构冲突 / 改用户可见行为 / 不可逆）
+## Core disciplines
 
-## 操作步骤
+1. **Ask until aligned.** Resolve every branch of the design discussion.
+2. **Identify domain terms.** Capture project-specific concepts and jargon.
+3. **Maintain CONTEXT.md.** Save confirmed definitions in the project glossary.
+4. **Restate the real problem first.** For significant decisions, briefly steelman the request: restate the intent, examine both directions, and identify decisive variables. Use the global AGENTS.md criteria for significance: cross-module impact, real alternatives, non-goals, architectural conflict, user-visible behavior, or irreversibility.
 
-### Step 1: 启动追问
+## Workflow
 
-用户描述需求后，立即开始追问。每次追问聚焦一个分支，直到该分支无歧义。
+### Step 1: Start the discussion
 
-**追问框架：**
-- 这个功能的边界是什么？（什么不做）
-- 涉及哪些角色/权限？
-- 数据量级和性能要求？
-- 错误场景和异常处理？
-- 与现有系统的交互点？
+Start asking when the user presents the requirement. Focus each question on one branch until its ambiguity is resolved.
 
-### Step 2: 识别并确认术语
+Cover:
+- Scope and non-goals.
+- Roles and permissions.
+- Data volume and performance requirements.
+- Errors and exceptional cases.
+- Connections to existing systems.
 
-在对话中识别项目特有的术语，向用户确认定义：
+### Step 2: Confirm terminology
+
+Identify project terms and confirm their definitions with the user. Example:
 
 ```
 我注意到几个术语需要确认：
@@ -41,9 +43,9 @@ description: 需求对齐技能。通过连续追问消除歧义，同时维护�
 2. "批量" — 具体数量级是多少？100、1000、还是 10000？
 ```
 
-### Step 3: 更新 CONTEXT.md
+### Step 3: Update CONTEXT.md
 
-对齐完成后，将确认的术语写入项目根目录的 `CONTEXT.md`：
+Once aligned, write the confirmed terms to `CONTEXT.md` at the project root. Example structure:
 
 ```markdown
 # CONTEXT.md
@@ -60,18 +62,15 @@ description: 需求对齐技能。通过连续追问消除歧义，同时维护�
 **触发条件**: 课程状态从 draft 变为 published
 ```
 
-### Step 4: 确认对齐完成
+### Step 4: Confirm alignment
 
-向用户总结：
-- 需求边界（做什么、不做什么）
-- 关键决策点及结论
-- 已更新的 CONTEXT.md 内容
+Summarize the scope, exclusions, important decisions, and changes to CONTEXT.md.
 
-## 产出物
+## Outputs
 
-- 无歧义的需求描述
-- 更新的 `CONTEXT.md`（项目领域词典）
+- Unambiguous requirements.
+- Updated project glossary in `CONTEXT.md`.
 
-## 下一步
+## Next
 
-需求对齐后，进入 `/to-spec` 阶段，将对话转化为结构化 spec。
+Use `/to-spec` to turn the aligned discussion into a structured Spec.

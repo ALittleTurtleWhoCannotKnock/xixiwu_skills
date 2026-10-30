@@ -1,45 +1,40 @@
 ---
 name: amend
-description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做增量变更，生成新版本 spec（v2/v3...）+ 更新索引 + 续接 ticket。含"增量 vs 重做"深度判断闸门，防止小改掩盖该重做的大变。交互型技能，留主会话。
+description: "Handle confirmed changes to an implemented feature with an incremental Spec version, current-version index, the same updated plan, and follow-on tickets. Check whether the change actually requires redesign; keep the interactive decisions in the main session."
 ---
 
 # Amend
 
-处理已实现 feature 的需求变动。**不重走全流程，基于原 spec 增量演进。**
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-## 触发信号
+Evolve an implemented feature incrementally from its existing Spec rather than restarting the entire workflow.
 
-- 某个 feature 的 spec/tickets 已实现（代码已提交）
-- 需求有变动：改字段、调逻辑、加边界、局部方案调整
-- 从头走 `/grill-with-docs` → `/to-spec` 太重
+## When to use
 
-## 核心 Discipline
+- Existing Spec/tickets were implemented and committed.
+- Fields, behavior, boundaries, or local requirements change.
+- Repeating the complete requirements workflow would be disproportionate.
 
-1. **变动部分才 grill** — 没变的部分不重问，节省时间
-2. **深度判断是闸门** — 区分"增量"和"重做"，防止小改掩盖该重做的大变
-3. **旧 spec 冻结** — 新版本独立成文（spec-v2.md），不覆盖历史
-4. **最新优先** — agent 默认读最新版本，旧版本按需追溯
-5. **plan 就地更新（不叠版本）** — 本地改同一 plan.md，远程改同一独立 Plan issue 正文；不新开 plan-vN，不将现行方案追加到 Spec 评论
-6. **变动先论证** — 深度判断前，对"这次变动的真实意图"做一次轻量钢人论证（重述 → 双向 → 找关键变量），避免把表面小改当作增量、漏看背后的核心动摇。"关键"按全局 AGENTS.md 的判定标准（跨模块影响 / 多方案权衡 / 影响非目标 / 与架构冲突 / 改用户可见行为 / 不可逆）
+## Core disciplines
 
-## 操作步骤
+1. Ask only about the changed part.
+2. Distinguish an increment from a redesign; small patches must not conceal a fundamental change.
+3. Freeze old Specs; write a separate version such as spec-v2.md.
+4. Use the latest execution version, referring to history as needed.
+5. Update the same local plan.md or independent Plan issue body, not plan-vN or Spec comments.
+6. Before classifying depth, briefly steelman the change's true intent: restate it, examine both directions, and find decisive variables. Apply the global AGENTS.md significance criteria, including architecture, scope, cross-module impact, alternatives, user behavior, and irreversibility.
 
-### Step 1: 读取现状（主会话）
+## Workflow
 
-先读 [共享执行约定](../_agents/workflow-contract.md)，新票分别记录 `Spec:` 与 `Plan:`，依赖使用 `Blocked by:`，状态以 tracker 声明为准。
+### Step 1: Read current state
 
-读取 `docs/agents/execution-mode.md`（缺失则视为"派子 agent"），确定后续 scout 是否派子 agent。
+Read the [shared contract](../_agents/workflow-contract.md), tracker, and execution-mode (missing defaults to subagent for later scout work).
 
-先读 tracker。本地模式读取 `.scratch/<feature>/`：
-- `INDEX.md`（若存在）→ 确定当前最新版本
-- 最新 spec（`spec-vN.md` 或 `spec.md`）
-- `issues/` 现有 ticket 编号（用于续接）
+Locally inspect `.scratch/<feature>/INDEX.md` if present, the current spec.md/spec-vN.md, and existing issue numbers. Remotely read the current Spec version, independent Plan, and tickets; verify the tracker's current-version reference against the Plan's `Spec:`. Missing `.scratch` does not mean a remote Spec is absent. If neither mode has a locatable Spec, use the normal requirements workflow.
 
-远程模式读取当前 Spec 版本、其关联的独立 Plan issue 和 tickets，以 tracker 声明的版本引用与 Plan 正文 `Spec:` 核对当前执行层；不要因没有 `.scratch` 而认定缺少 Spec。两种模式都没有可定位的 Spec 时，提示走正常需求流程。
+### Step 2: Discuss only the change
 
-### Step 2: grill 变动内容（主会话，交互型）
-
-**只问变动的部分**，不重问整个需求：
+Do not repeat unchanged requirements. Example:
 
 ```
 当前 spec-vN 的方案是 X。你说要变动，具体变什么？
@@ -49,17 +44,17 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 - 为什么变？（新需求 / 原方案有问题 / 外部约束变了）
 ```
 
-### Step 3: 深度判断（闸门，主会话）
+### Step 3: Confirm depth
 
-判断变动属于哪类，并把判断摆给用户确认：
+Classify the change and present the judgment:
 
-| 深度 | 特征 | 处理 |
-|------|------|------|
-| **表层** | 加字段、调文案、加边界校验、改默认值 | 增量：新 spec 版本 + 新 ticket |
-| **局部** | 改某个实现方案、换一个库、调某个模块职责 | 增量：新 spec 版本 + 新 ticket |
-| **核心** | 架构假设变了、主流程变了、非目标被推翻、多数决策失效 | **停止增量**，建议重新走 `/to-spec` |
+| Depth | Signals | Action |
+|-------|---------|--------|
+| Surface | Fields, copy, boundary checks, defaults | New Spec version and follow-on tickets |
+| Local | One implementation choice, library, or module responsibility | Incremental version and tickets |
+| Fundamental | Architectural assumptions, main flow, non-goals, or most decisions overturned | Stop incremental work and recommend `/to-spec` |
 
-**若是核心变动**，明确告知用户：
+For a fundamental change, explain the concrete issue, for example:
 
 ```
 这个变动动摇了 spec 的核心决策（具体：[哪条]）。
@@ -68,11 +63,11 @@ description: 处理已实现 spec 的需求变动。基于原 spec/tickets 做�
 仍要强制增量吗？（不推荐）
 ```
 
-用户确认后才可继续。
+Continue only after the user's confirmation.
 
-### Step 4: 生成新版本 spec（主会话）
+### Step 4: Write the next Spec
 
-**增量变动** → 本地生成 `spec-v(N+1).md`；远程按 tracker 既有版本约定保存新 Spec 并保留旧版引用，不自行改换 Spec 的版本存放方式。正文结构如下：
+For an increment, create local `spec-v(N+1).md`; remotely retain the tracker's existing version-storage convention and older references. Do not silently change how versions are stored.
 
 ```markdown
 # <Feature> Spec v(N+1)
@@ -104,11 +99,11 @@ Plan: <既有 Plan 文件/issue 引用；没有则 none>
 - 未列在上方"变动的决策"中的所有决策
 ```
 
-**关键：** v(N+1) 只记变动点 + 明确"不变的部分沿用 v(N)"，不复制全文。这样保持文件精炼。
+Record changed points only and explicitly inherit unchanged parts from v(N); do not copy the entire earlier Spec.
 
-### Step 5: 更新当前版本引用（主会话）
+### Step 5: Update the current-version entry
 
-本地 `.scratch/<feature>/INDEX.md` 不存在则创建，存在则更新当前版本与演进记录，并按[归属层级与列表约定](../_agents/workflow-contract.md#归属层级与列表展示)保留 Plan、tickets 层级链接；不把整个 INDEX 替换为仅有版本列表的文件：
+Create/update local INDEX's current version and evolution history while retaining the Plan/ticket [navigation hierarchy](../_agents/workflow-contract.md#归属层级与列表展示). Do not replace it with a version-only list.
 
 ```markdown
 # Feature: <feature>
@@ -126,27 +121,25 @@ Plan: [plan.md](plan.md)（仅已有 Plan 时保留此链接）
 - v(N+1) (spec-v(N+1).md): [本次变动概括]（进行中）
 ```
 
-远程更新 tracker 既有的当前版本引用，并在 Step 5.5 同步独立 Plan issue 的 `Spec:`；不额外创建本地 INDEX 主存。若 tracker 没有可定位版本的约定，先报告缺失，不用最新评论或 issue 编号猜测。
+Remotely update the existing current-version entry and synchronize the Plan's `Spec:` in Step 5.5. Do not create a local INDEX master. If version provenance cannot be located, report it rather than guessing from the newest comment or largest issue number.
 
-**规则：** 当前版本引用指向本次确认的 Spec；实现方按该引用及 Plan 的 `Spec:` 定位执行版。
+The current entry must reference this confirmed Spec. Before writing, reread INDEX/the remote current-version entry and the Plan's `Spec:`; compare with Step 1. On concurrent changes, stop overwriting and report both values.
 
-**并发保护：** 写入前重读 INDEX 或远程当前版本引用及 Plan 的 `Spec:`，确认仍为 Step 1 读取的版本；发生并发变化则停止覆盖，列出原值与现值并报告冲突。
+### Step 5.5: Update the same plan
 
-### Step 5.5: 就地更新现行 plan（若存在）
+Update the same plan.md or independent Plan issue body:
+- Revise affected technical decisions and explain which v(N+1) change caused them.
+- Revise affected package paths/risks and update method anchors as symbols move. Preserve anchors as the location source; append new package numbers rather than renumbering history.
+- Even if only product boundaries changed, update the Plan's `Spec:` to the new version.
+- The new Spec inherits the confirmed Epic; synchronize the Plan's `Parent:`. For a new GitHub Spec issue, verify the old parent and same-feature evidence under the shared migration rule before moving the same Plan. Report conflicts without forcing a reparent or moving old tickets.
+- Add the lightweight change stamp `> 更新：v(N+1) [日期] [一句话]`, preserving history while the body stays current.
+- When functional acceptance scope changes, reset the sole acceptance owner (Plan, otherwise Spec) to pending, retaining prior version records. Engineering tickets still close automatically; earlier accepted state is not acceptance of the new scope.
 
-技术方案演进时，本地修改同一 `plan.md`，远程按 `Plan:` 引用修改同一独立 Plan issue 正文（不新开 plan-vN）：
+New tickets reference this same plan and P<N>. Preserve target-creation phases. Reuse valid approval for the current approach; review out-of-scope new technical choices before updating approval. Comments hold discussion/evidence, not the authoritative plan.
 
-- 技术决策表：新增/修订本次变动涉及的决策行，理由栏注明"源于 v(N+1) [变动点]"
-- 包分解：受影响的 P 条目改写技术路径/风险点；**改动锚点随方法改名/重构同步更新**（锚点是定位事实源，腐化前主动修，别等 implementer 报错）；全新工作包续接编号（P(N+1)…）
-- 若只变产品边界而技术方案未变 → 技术正文沿用，仍将 plan 的 `Spec:` 引用更新到本次 Spec 版本
-- 新 Spec 继承已确认的 Epic；Plan 的 `Parent:` 同步当前规格。GitHub 若新版 Spec 另建 issue，按共享约定核对旧父级和同 feature 证据后迁移同一个 Plan；已有父级冲突则报告，不强制重挂，不移动历史 tickets
-- plan 头部加一行变更戳记：`> 更新：v(N+1) [日期] [一句话]`（保留演进线索，正文保持现行状态）
+### Step 6: Add follow-on tickets
 
-新票的 `Plan:` 引用同一本地 plan 或同一 Plan issue 中的 P<N>。保留锚点生成阶段；本次方案已有明确授权时沿用，超出原批准范围的技术决策需先完成对应 review，再更新正文批准状态；评论只记录依据与讨论。
-
-### Step 6: 续接 ticket（主会话）
-
-本地在 `.scratch/<feature>/issues/` 生成新 ticket，**编号续接**（现有最大编号 +1）；远程创建独立 ticket issues，使用平台返回的编号并回填同一 Plan issue。新票初始为 `Status: ready`，不改旧票的 resolved 状态。本地示例：
+Locally continue numbering after the highest existing ticket; remotely use returned issue numbers and backlink them in the same Plan. Start at `Status: ready` and preserve old resolved tickets.
 
 ```
 issues/
@@ -156,34 +149,20 @@ issues/
 └── 04-yyy.md  (新，ready)   ← 本次变动
 ```
 
-新票分别记录本次 `Spec:` 版本与 `Plan:` 包引用；本地如 `spec-v(N+1).md` / `plan.md#P<N>`，远程如 `<Spec 版本引用>` / `<Plan issue> / P<N>`。不需要 plan 时写 `Plan: none (原因)` 并补齐决策；依赖用 `Blocked by:` 声明。
+Keep `Spec:` and `Plan:` separate: locally `spec-v(N+1).md` / `plan.md#P<N>`, remotely the Spec-version reference / Plan issue and P<N>. If a plan is unnecessary, declare `Plan: none (原因)` and include necessary decisions. Use `Blocked by:` for dependencies.
 
-新票的 `Parent:` 指向同一个 Plan（省略时按共享规则处理），不是被续接的旧 ticket。本地更新 INDEX 和 `.scratch/README.md` 导航，保留旧规格与旧票及其状态；GitHub 同步新 Spec、Plan、新 tickets 的原生归属及类型标签，Projects 仅使用已配置目标。历史 ticket 的版本、归属和状态不随当前规格切换而重写。
+A new ticket's `Parent:` is the same Plan or the shared fallback, **not the old ticket it continues**. Maintain local INDEX/root navigation or remote native relationships/type labels. Use only a configured Project. Do not rewrite historical ticket versions, parents, or states because the current Spec changed.
 
-### Step 7: 实现（进入 /implement）
+### Step 7: Hand off to implementation
 
-新 ticket 就绪后，走正常 `/implement` 流程。implementer 实现时：
-- 先读本地 INDEX 或远程当前版本引用，并核对 Plan 的 `Spec:`
-- 读 v(N+1)（变动点）+ 必要时回溯 v(N)（背景）
+Use `/implement` when new tickets are ready. It reads INDEX/the remote current reference, checks the Plan's `Spec:`, and uses v(N+1), referring back to v(N) for context.
 
-## 产出物
+## Outputs
 
-- 新版本 Spec — 本地文件或 tracker 中可定位的版本（只记变动点）
-- 更新的当前版本引用与演进记录（本地为 `INDEX.md`）
-- 就地更新的 plan 文件/独立 issue 正文，不叠版本
-- 续接编号的新 ticket — 待实现（分别记录 `Spec:` 与 `Plan:`，来源不混写）
+- A locatable incremental Spec version and updated current-version/evolution entry.
+- The same plan updated in place.
+- New, sequentially numbered tickets with distinct Spec/Plan provenance.
 
-## 边界
+## Boundaries and related stages
 
-| 适合 | 不适合 |
-|------|--------|
-| 已实现 spec 的表层/局部变动 | 核心决策变动（该重新 `/to-spec`） |
-| 需求的小步演进 | 全新 feature（该走 `/grill-with-docs`） |
-| 保留演进历史可追溯 | 想覆盖历史假装没改过（本技能刻意保留历史） |
-
-## 与其他技能的关系
-
-- **输入**：tracker 中可定位的现有 Spec、Plan 与 tickets
-- **深度判断为"核心"时** → 转 `/to-spec`（重新走流程）
-- **新 ticket 就绪后** → `/implement`（正常实现流程）
-- **scout**：Step 1 如需重新理解当前代码状态，可按 execution-mode 分派 scout
+Use this for surface/local evolution and traceable history, not a new feature, fundamental redesign, or overwriting history. Fundamental changes return to `/to-spec`; ready tickets use `/implement`. Scout may inspect current code in Step 1 according to execution-mode.

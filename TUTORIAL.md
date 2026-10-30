@@ -15,7 +15,7 @@
 ## 一页总览
 
 ```
-/init-dev-flow（每个仓库一次，定三项配置）
+/init-dev-flow（每个仓库首次配置，缺项可单独补齐）
         ↓
 /grill-with-docs → /to-spec → /to-plan → /to-tickets → /implement
      提需求          拆需求      实施蓝图      拆 ticket       实现
@@ -29,7 +29,7 @@
 
 | 你的状态 | 执行命令 | 产出 |
 |---------|---------|------|
-| 新仓库首次接入 | `/init-dev-flow` | 三项配置（tracker / 提交策略 / 执行模式） |
+| 新仓库首次接入或补语言 | `/init-dev-flow` | 四项配置（tracker / 提交策略 / 执行模式与模型 / 语言） |
 | 需求在脑子里，怕 agent 理解错 | `/grill-with-docs` | 对齐后的需求 + CONTEXT.md |
 | 需求已对齐，需要方案文档 | `/to-spec` | spec（含 seams 分析 + mermaid 图），存入 tracker |
 | spec 已确认，需要确定技术路径 | `/to-plan` | 技术决策、包分解、改动锚点与验证策略，经用户批准 |
@@ -46,15 +46,16 @@
 
 ## 阶段 0：初始化 — `/init-dev-flow`
 
-**每个仓库运行一次。** Agent 会自动探测环境，确定三项配置，写入 `docs/agents/`。
+**每个仓库首次运行，缺项可单独补齐。** Agent 自动探测 tracker，并确认提交、执行和语言偏好，写入 `docs/agents/`。
 
-### 三项配置
+### 四项配置
 
 | 配置 | 文件 | 决策 | 怎么定 |
 |------|------|------|--------|
 | tracker 类型 | `issue-tracker.md` | GitHub / GitLab / 本地 `.scratch` | **探测**：git remote + gh/glab CLI + .scratch 是否已存在 |
 | 提交策略 | `commit-strategy.md` | per-ticket / squash | **探测** git log + 向你确认 |
 | 执行模式与基础模型 | `execution-mode.md` | subagent / inline；分派时使用的基础模型 | **询问**执行模式；subagent 模式列出实际可用模型，用户选择 ID 或 inherit |
+| 交互与业务产物语言 | `language.md` | 两项独立选择，可同可不同 | **确认**当前候选语言；已有明确选择直接沿用，不保存猜测值 |
 
 ### 执行
 
@@ -74,9 +75,12 @@ Agent 探测后报告判定，例如：
 - tracker: 本地模式（无 remote）
 - 提交策略: squash？请确认
 - 执行模式: 默认派子 agent 吗？（A 派 / B 主会话直接做）
+- 语言: 交互和业务产物分别用什么语言？例如中文交流、英文文档（请确认）
 ```
 
 选择分派后，Agent 根据当前工具的实际模型列表引导选择，或由你明确选择继承当前主会话（`inherit`），写入 `execution-mode.md` 的“基础模型”。模板不预填具体模型。Pi 生成 agent 时读取该项目配置；其他工具分派时按支持的格式应用，尚未实际调用的模型明确标注运行未验证。
+
+语言在生成后续文档前确认并保存，配置使用固定键 `interaction_language` 和 `artifact_language`，值由使用者选择。选择中文交互、英文产物后，追问、review 摘要和 `/find` 说明用中文，Spec/Plan/Ticket 的可读内容用英文；协议字段和状态值不翻译。临时指定某一项只影响当前任务；原始会话导出不因产物语言而翻译原文。
 
 ### 产出
 
@@ -84,12 +88,13 @@ Agent 探测后报告判定，例如：
 docs/agents/
 ├── issue-tracker.md    # tracker 类型（单一事实源）
 ├── commit-strategy.md  # 提交策略（simplify 触发时机）
-└── execution-mode.md   # 执行模式 + 用户确认的基础模型
+├── execution-mode.md   # 执行模式 + 用户确认的基础模型
+└── language.md         # 用户确认的交互语言 + 业务产物语言
 .scratch/README.md      # 本地模式才有
 AGENTS.md               # 根目录指针（新开发者/agent 一眼可见）
 ```
 
-**关键：** 三项都是"定默认，单次可覆盖"。比如 execution-mode 选了"派子 agent"，某张小 ticket 你说"别派了"，就临时改主会话做。
+**关键：** 偏好都是“定默认，单次可覆盖”。比如 execution-mode 选了“派子 agent”，某张小 ticket 说“别派了”，就临时改主会话做；指定“这轮 Plan 用中文”也不把项目的英文产物默认改掉。旧项目只补语言时不重选模型或其他设置，不自动重译既有文档。
 
 ---
 
@@ -185,6 +190,8 @@ Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`
 
 Plan 的 `Parent:` 指向 Spec：本地更新同一 INDEX 的方案链接，GitHub 建立原生子 issue 并核对。tracker 已指定 Project 时加入同一个 Project，可用 View → Show hierarchy 查看层级；没有 Project 仍可继续普通 Issues 流程。
 
+Plan 用独立的 `Acceptance: pending / accepted / changes-requested` 记录人工功能验收，方案的“已批准”不代表验收通过。工程票自动完成后，上层仍可 pending；只有用户实际确认功能验收通过才记录 accepted。没有 Plan 时由 Spec 承担同一职责，不维护两份状态。
+
 ---
 
 ## 阶段 3：拆 ticket — `/to-tickets`
@@ -268,13 +275,14 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
   │      └─ 重新分派（≥2 次则停，人工介入）  │
   ├─ 4. 核对报告 ←────────────────────────┘
   │      （验收标准全满足？测试通过？）
-  │      ├─ 适用检查通过 → code-complete，更新依赖
-  │      └─ 涉及端点 → 生成契约，供下一票联调
+  │      ├─ 涉及端点 → 生成本票必需契约
+  │      ├─ 工程检查与 review 通过 → resolved / 自动关票，更新依赖
+  │      └─ 人工功能验收项 → Plan（无 Plan 时 Spec）
   ├─ 5. 提交节点（读 commit-strategy）
   │      ├─ 分派 simplify 清理
   │      ├─ 人工 checkpoint（你确认）
   │      └─ 提交
-  └─ 6. 必需验收 + 收尾 checkpoint 完成 → resolved
+  └─ 6. Plan/Spec 功能验收：用户实际确认后记录 accepted 并关闭验收单
 ```
 
 **关键边界：**
@@ -283,7 +291,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 - **子 agent 遇到未覆盖的决策会停止并报告**，不猜测、不扩大范围（决策已在 spec/ticket 阶段拍死）
 - **子 agent 报"方向错误"（ticket 方案在现有架构不成立）会触发 Step 3.5**：主会话对齐架构 → 修正 ticket → 按层级判断是否回写 spec → 重新分派；同一 ticket 连续 ≥2 次方向错误则停，转人工
 - **绝不主动提交**：即使全部检查通过，也先停在人工 checkpoint，经你确认才提交
-- **提交与依赖分别处理**：每票自动验证通过即可记 `code-complete` 并继续下游；squash 不要求先提交上游票。待人工/真机验收项保留记录，最终验收与 checkpoint 完成后才 `resolved`
+- **票级完成、功能验收与提交分别处理**：每票实现、必要工程检查和 review 通过即 `resolved` / 自动关闭并继续下游；squash 不要求先提交上游票。人工功能验收集中到 Plan/Spec 的 Acceptance，未提交或未人工验收不拖住合格工程票
 - **execution-mode=inline 时**，主会话参照 `_agents/implementer.prompt.md` 执行同样的实现与验证规则，不重启子进程
 
 验证方式在执行前确定：业务行为与 bug 在已有测试中先复现再实现；纯重构跑前后回归；文档、配置和样式使用适用检查。同一测试边界的多个场景复用文件、fixtures 与参数化，不按票据另起测试文件。一次性探针放系统临时目录，有长期价值的回归覆盖仍保留；必要检查失败或未运行时不能报完成。
@@ -344,7 +352,7 @@ Day 1 上午        Day 1 下午       Day 2 上午      Day 2 下午        Day
 /init-dev-flow   /grill-with-docs  /to-spec         /to-plan        /to-tickets
     │                 │                │                │                │
     ▼                 ▼                ▼                ▼                ▼
-三项配置：        对齐需求：        spec：           plan.md：        tickets：
+四项配置：        对齐需求：        spec：           plan.md：        tickets：
 - tracker: 本地   - 需登录          - 四段式          - 技术决策表      - 01 prefactor
 - 提交: squash    - 嵌套3层         - seams: HTTP API - 包分解 P1..Pn  - 02 模型+API
 - 执行: 派子 agent - 敏感词过滤      - 存 .scratch/    - 风险点         - 03 嵌套回复
@@ -355,17 +363,19 @@ Day 4 全天
     ▼
 /implement（逐 ticket）
     │
-    ├─ ticket 01: 红绿重构 → 核对 → code-complete，解除 02 的 ticket 依赖
-    │     （squash 策略，暂不提交，最终验收项仍保留）
+    ├─ ticket 01: 红绿重构 → 工程核对与 review → resolved / 自动关票，解除 02 依赖
+    │     （squash 策略，暂不提交，人工功能验收项留在 Plan）
     ├─ ticket 02: 同上；涉及端点则立即生成契约
     ├─ ticket 03: 同上；使用前票的代码与契约
     │
-    ▼ 执行票均 code-complete/resolved，进入统一收尾节点
+    ▼ 执行票均 resolved；功能显示“开发完成，待功能验收”
   分派 simplify（scope=累计 diff）→ 修复报告
     │
     ▼ 人工 checkpoint：你确认
-  必需验收通过 → resolved；经明确授权统一提交
-  若选择暂不提交，记录选择并保留工作区；待验收项不标 resolved
+  经明确授权统一提交；暂不提交时保留工作区，票级状态不回退
+    │
+    ▼ 在 Plan（无 Plan 时 Spec）集中做功能验收
+  用户确认后 Acceptance: accepted，关闭相应验收单；票全关不代表验收通过
 ```
 
 ### 产出文件树
@@ -378,7 +388,8 @@ project/
 │   └── agents/
 │       ├── issue-tracker.md               # 阶段 0
 │       ├── commit-strategy.md             # 阶段 0
-│       └── execution-mode.md              # 阶段 0
+│       ├── execution-mode.md              # 阶段 0
+│       └── language.md                    # 交互与业务产物语言
 ├── .scratch/
 │   └── blog-comments/
 │       ├── spec.md                        # 阶段 2
@@ -402,11 +413,11 @@ project/
 | 先初始化 | 没有 `docs/agents/*.md`，to-spec/to-tickets/implement 会提示先跑 `/init-dev-flow` |
 | 阶段顺序 | 常规 feature：grill → spec → plan（批准）→ tickets → implement；小改动按共享约定明确省略 |
 | 产出物即输入 | spec → plan → tickets → 代码；简化票包含被省略文档中的必要决策 |
-| 决策前置 | 产品边界在 spec，技术方案在 plan，执行验收在 ticket；省略文档时决策收在 ticket |
-| 状态与提交 | 每票验证后更新 code-complete 与依赖；最终验收和 checkpoint 完成才 resolved，不由 squash 提交时点决定 |
+| 决策前置 | 产品边界在 spec，技术方案在 plan，票级工程条件在 ticket；人工功能验收集中到 Plan/Spec |
+| 状态与提交 | 本票工程工作通过即 resolved/自动关闭；功能 Acceptance 与提交授权分别记录，均不阻止票级完成 |
 | 子 agent 边界 | 不提交、不跑 simplify、遇未授权决策停止并报告、报方向错误触发 Step 3.5 |
 | 绝不主动提交 | 任何阶段、任何 agent，未经你明确指示都把改动留在工作区 |
-| 配置可覆盖 | 三项配置都是默认值，单次执行可临时改 |
+| 配置可覆盖 | 四项配置按项目保存，单次明确要求可临时覆盖对应项 |
 | 交互型留主会话 | grill/diagnosing/spec/plan/tickets 需要和你对话，不派子 agent |
 
 ---

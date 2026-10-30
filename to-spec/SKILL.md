@@ -1,49 +1,44 @@
 ---
 name: to-spec
-description: 将已对齐的需求转化为结构化 spec，包含功能流程图、调用时序图、测试边界与模块影响清单。四段式记录产品意图与边界，技术决策留给 /to-plan。适用于需要固化需求并交给规划的场景。
+description: "Turn aligned requirements into a four-section product Spec with business flow, sequence flow, test seams, and module impact. Leave technical implementation decisions to /to-plan."
 ---
 
 # To Spec
 
-## 触发信号
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-- 需求已通过 `/grill-with-docs` 对齐
-- 需要一份可评审、可追踪的方案文档
-- 多人协作，需要共享上下文
+## When to use
 
-## 核心 Discipline
+- Requirements are aligned through `/grill-with-docs`.
+- A reviewable, traceable product document is needed.
+- Collaborators need shared context.
 
-1. **四段式结构** — 问题、非目标、方案、影响，缺一不可
-2. **Seams 分析** — 确定测试边界，优先使用现有接缝，减少新增
-3. **非目标必须显式** — 明确不做什么，防止范围蔓延
-4. **模块影响分析** — 识别所有受影响和不受影响的模块
-5. **产品意图与边界，不管技术实现** — spec 只回答"做什么/不做什么/谁负责"。技术选型（用什么库、怎么实现）是 `/to-plan` 的决策范围，不写进 spec
-6. **关键决策先论证** — 对有分歧的产品决策，先做一次轻量钢人论证（重述 → 双向 → 找关键变量），再写入"关键决策"表，避免把未对齐的假设固化进 spec。"关键"按全局 AGENTS.md 的判定标准（跨模块影响 / 多方案权衡 / 影响非目标 / 与架构冲突 / 改用户可见行为 / 不可逆）
+## Core disciplines
 
-## 操作步骤
+1. **Keep four sections:** problem, non-goals, approach, and module impact.
+2. **Analyze test seams**, preferring existing boundaries.
+3. **Make non-goals explicit** to prevent scope creep.
+4. **Identify affected and unaffected modules.**
+5. **Own product intent, not implementation.** Answer what to do, exclude, and assign. Libraries and implementation choices belong to `/to-plan`.
+6. **Examine significant decisions before recording them.** Briefly steelman disputed product choices: restate intent, examine both directions, and identify decisive variables before filling the key-decision table. Apply the global AGENTS.md significance criteria: cross-module impact, alternatives, non-goals, architectural conflict, user-visible behavior, or irreversibility.
 
-### Step 1: 侦察代码库（默认分派 scout 子 agent）
+## Workflow
 
-**先读执行模式：** 读取 `docs/agents/execution-mode.md`（缺失则视为"派子 agent"）。用户可在单次执行时覆盖默认。
+### Step 1: Gather code context
 
-**默认 / `subagent` 模式 → 分派 `scout` 子 agent** 侦察本次变更涉及的代码区域，产出压缩上下文到 `.scratch/<feature-slug>/context.md`。scout 只读不改，返回"Files Retrieved / Key Code / Architecture / Existing Seams / Start Here"的结构化简报。
+Read `docs/agents/execution-mode.md`; missing means subagent by default. Respect a task override.
 
-**`inline` 模式 / 用户单次覆盖 → 主会话直接探索**：参照 `_agents/scout.prompt.md` 的方法侦察并记录。
+In subagent mode, send a read-only scout to the relevant code and save a concise `.scratch/<feature-slug>/context.md` brief with `Files Retrieved / Key Code / Architecture / Existing Seams / Start Here`.
 
-同时（无论哪种模式）：
-- 使用项目领域词典（`CONTEXT.md`，若存在）中的术语
-- 尊重现有 ADR（`docs/adr/`，若存在）
-- 上述文件不存在则跳过，基于代码和对话理解继续
+In inline mode, the main session follows `_agents/scout.prompt.md` directly. In either mode, use `CONTEXT.md` terminology and respect existing `docs/adr/`; if absent, continue from code and discussion.
 
-> 侦察逻辑的单一事实源是 `_agents/scout.prompt.md`；产出的 `context.md` 同时是 Step 2 Seams 分析和后续 `/to-tickets`、`/implement` 的输入（契合"产出物即下一阶段输入"）。
+The scout prompt is the sole discovery source. Its brief feeds seam analysis, `/to-tickets`, and `/implement`.
 
-### Step 2: Seams 分析
+### Step 2: Analyze seams
 
-先按[共享验证规则](../_agents/workflow-contract.md#验证方式与测试组织)判断改动类型。以下 seams 分析针对行为测试；纯文档、配置、样式或重构在测试策略中说明适用检查，不强制新增运行时测试边界。
+First classify the change under the [shared validation rules](../_agents/workflow-contract.md#验证方式与测试组织). Seam analysis below concerns behavior tests. For documentation, configuration, styles, or refactors, explain applicable checks without inventing runtime boundaries.
 
-确定测试边界（seams）。优先使用现有接缝，避免新增。**优先复用 scout 简报中 "Existing Seams" 列出的现有接缝。**
-
-**Seams 层级（从高到低）：**
+Reuse the brief's Existing Seams first. Prefer higher-level existing boundaries:
 
 ```
 高层接缝（优先）     例：HTTP API、CLI 命令
@@ -54,12 +49,8 @@ description: 将已对齐的需求转化为结构化 spec，包含功能流程�
     ↓ 测试实现细节，重构时易破坏
 ```
 
-**原则：**
-- 现有 seams 优先于新建 seams
-- 尽可能使用最高层 seam
-- 覆盖当前功能的主要外部行为；只为独立风险补充其他边界，不默认在每个内部层级重复测试
+Cover the feature's main external behavior. Add another boundary only for a distinct risk, not to duplicate tests at every internal layer. Confirm the proposed boundaries with the user, for example:
 
-**输出：** 向用户确认测试边界：
 ```
 我建议在以下 seams 测试：
 - HTTP API 层：POST /exports（现有 seam，直接复用）
@@ -68,9 +59,11 @@ description: 将已对齐的需求转化为结构化 spec，包含功能流程�
 是否符合你的预期？
 ```
 
-### Step 3: 合成 spec 内容
+### Step 3: Draft the Spec
 
-基于对齐结果和 seams 分析，合成四段式 spec。**图示部分用 Mermaid 表达**（参照 `_agents/diagram-guide.md`）：在方案概述中用 `flowchart` 画功能流程，说明用户从哪里进入、做什么、如何分支、得到什么结果；跨参与者调用继续用 `sequenceDiagram`。模块影响保留文字清单。用 ```` ```mermaid ```` 代码块包裹。
+Use the four-section structure below. Follow `_agents/diagram-guide.md`: put a business `flowchart` in the approach, showing entry, user actions, branches, and outcomes; use `sequenceDiagram` for cross-participant calls. Keep module impact as prose. Wrap diagrams in fenced `mermaid` blocks.
+
+The template illustrates structure; localize human-readable prose under the language policy while preserving protocol fields.
 
 ````markdown
 ## 问题陈述
@@ -141,26 +134,23 @@ sequenceDiagram
 - [模块名]: [为什么不受影响]
 ````
 
-### Step 4: 保存 spec
+### Step 4: Save
 
-读取 `docs/agents/issue-tracker.md` 判断 tracker 模式；若该文件缺失，提示先运行 `/init-dev-flow`。spec 的存放路径与格式遵循该文件的约定（本地模式为 `.scratch/<feature-slug>/spec.md`，feature-slug 从需求提取 kebab-case；GitHub/GitLab 模式用对应 CLI 创建 issue）。
+Read `docs/agents/issue-tracker.md`; if missing, request `/init-dev-flow`. Follow its paths/formats: locally `.scratch/<feature-slug>/spec.md` with a kebab-case feature slug derived from the requirement; remotely use the declared GitHub/GitLab tool.
 
-按[归属层级与列表约定](../_agents/workflow-contract.md#归属层级与列表展示)在 Spec 头部写 `Parent:`：已有明确 Epic 则引用它，否则写 `none`，四段式正文保持不变。
+Under the [ownership/navigation rules](../_agents/workflow-contract.md#归属层级与列表展示), write `Parent:` at the top: the explicitly identified Epic, or `none`. Keep the four-section body.
 
-- 本地：同时创建/更新 feature 的 `INDEX.md`，登记当前规格和已有产物链接，并在 `.scratch/README.md` 登记 feature 入口；只链接已存在的文件，不为尚未生成的 Plan 建占位文件。
-- GitHub：采用 `[Spec]` 标题和项目类型标签；已指定 Epic 时建立原生父子关系并核对，按 tracker 中已配置的 Project 同步展示，失败项如实报告。
+- **Local:** Create/update the feature INDEX and `.scratch/README.md` entry. Link the current Spec and actual artifacts only; do not create a placeholder Plan.
+- **GitHub:** Use `[Spec]` and the project's type label. If an Epic is specified, establish and verify the native parent relationship. Use the configured Project when present; report unsynchronized items.
 
-后续 `/to-plan` 生成方案后，将 `Plan:` 引用回填 Spec；本地仅更新当前规格及索引，保留冻结的历史规格，远程各自维护正文，不把现行技术方案放在 Spec 评论中。
+When `/to-plan` later creates the plan, backlink `Plan:` from the current Spec. Locally update only the current Spec/index, preserving frozen versions. Remotely maintain separate bodies rather than placing the current plan in Spec comments.
 
-### Step 5: 用户确认
+The Spec defines product acceptance criteria. If tickets proceed without a Plan, add a functional-acceptance subsection within the approach and `Acceptance: pending`; this Spec owns acceptance. With a Plan, link its acceptance entry instead. Maintain one acceptance state, without adding a fifth top-level Spec section.
 
-向用户展示 spec 摘要，确认无误后进入下一阶段。
+### Step 5: Confirm
 
-## 产出物
+Present the Spec summary; proceed after user confirmation.
 
-- 结构化 spec 文档（含功能流程图、seams 分析与端到端调用时序图）
-- 明确的模块边界和影响范围
+## Outputs and next stage
 
-## 下一步
-
-Spec 确认后，进入 `/to-plan` 阶段，产出本地 plan.md 或独立 Plan issue，把技术选型、实现路径、风险点在实现前拍死并审批，再由 `/to-tickets` 拆执行细节。
+Produce a structured Spec with business flow, test seams, sequence flow, and explicit module boundaries/impact. After confirmation, use `/to-plan` for the technical choices, implementation path, risks, and approval, then `/to-tickets` for execution details.

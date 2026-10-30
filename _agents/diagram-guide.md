@@ -1,48 +1,40 @@
-# 图示规范（Diagram Guide）— Mermaid 版
+# Diagram Guide — Mermaid
 
-dev-flow-skills 的图示约定。**统一使用 mermaid 语法**：渲染友好（GitHub/飞书/IDE/02 文档生态原生支持）、源码即文本可进 git diff、agent 直接可读写。
+Use Mermaid source for dev-flow-skills diagrams: readable by agents, renderable by the supported documentation viewers, and reviewable as text diffs.
 
-**核心原则：变体即语义。** 符号承载含义，不是装饰。标签是语义数据，不能为排版删除。
+**Variants carry meaning.** Shapes/arrows are semantics, not decoration. Labels contain data; never remove them for layout. New display labels follow artifact language; supplied diagram data remains authoritative.
 
-**分两档复杂度：**
-- **架构图**：项目级模块地图（`.scratch/architecture.md`）——`flowchart` + 泳道 subgraph，看得人多、生成一次
-- **spec 内嵌图**：功能流程图（`flowchart`）表达业务路径，时序图（`sequenceDiagram`）表达跨参与者调用——更新频繁，控制维护成本
+Use a project architecture flowchart with swimlanes for `.scratch/architecture.md`. Embed smaller business flowcharts and cross-participant sequence diagrams in Specs, keeping maintenance proportional.
 
----
+## 1. Component types
 
-## 一、组件类型（7 类枚举，沿用 archify componentType）
+Architecture nodes and call participants may use the seven archify componentType prefixes. Business workflows use actions/decisions instead and do not require component tags.
 
-架构节点与调用参与者可用 `[type]` 前缀承载类型语义；功能流程图使用业务动作与判断，不要求组件类型标记：
+| Prefix | Meaning |
+|--------|---------|
+| `[frontend]` | UI/frontend |
+| `[backend]` | Service/API |
+| `[database]` | Storage |
+| `[cloud]` | Cloud/infrastructure |
+| `[security]` | Authentication/security boundary |
+| `[messagebus]` | Queue/event bus |
+| `[external]` | External actor/third party |
 
-| 标记 | 含义 |
-|------|------|
-| `[frontend]` | 前端/UI |
-| `[backend]` | 后端服务/API |
-| `[database]` | 存储 |
-| `[cloud]` | 云服务/基础设施 |
-| `[security]` | 鉴权/安全边界 |
-| `[messagebus]` | 消息队列/事件总线 |
-| `[external]` | 系统外角色/第三方 |
+## 2. Cross-participant sequence diagrams
 
----
+Embed the end-to-end call flow in the Spec approach.
 
-## 二、时序图（sequenceDiagram）— 跨参与者调用
+| Syntax | Meaning |
+|--------|---------|
+| `A->>B: action` | Synchronous call |
+| `A-->>B: (return) result` | Dashed return |
+| `A-)B: (async) event` | Asynchronous/open-arrow message |
+| `Note over A[,B]: text` | Branch, boundary, or placeholder annotation |
+| `alt ... else ... end` | Conditional branch |
+| `loop ... end` | Loop |
+| `actor U as user` | External actor |
 
-**用途：** feature 的端到端调用流，嵌入 spec 的"方案概述"。
-
-**语义符号（mermaid 原生，对应语义）：**
-
-| 语法 | 含义 |
-|------|------|
-| `A->>B: 动作` | 同步调用 |
-| `A-->>B: (return) 结果` | 返回（虚线） |
-| `A-)B: (async) 事件` | 异步消息（开放箭头） |
-| `Note over A[,B]: 文本` | 备注（分支条件/边界/占位标注） |
-| `alt ... else ... end` | 条件分支 |
-| `loop ... end` | 循环 |
-| `actor U as 用户` | 外部参与者 |
-
-**模板：**
+Syntax template:
 
 ```mermaid
 sequenceDiagram
@@ -64,19 +56,11 @@ sequenceDiagram
     Note over be: 敏感词过滤失败走 alt 分支
 ```
 
-**约束：**
-- 参与者顺序固定，时间自上而下
-- 每个有含义的调用都带标签（协议/动作），不省略
-- return/async/security 必须标注——这是语义不是装饰
-- 关键边界（系统内外/现有 vs 新增/占位 vs 正式）用 `Note` 标注
+Keep participant order fixed and time top-to-bottom. Label meaningful calls with protocol/action. Explicitly identify return/async/security semantics. Use Notes for important internal/external, existing/new, or placeholder/production boundaries.
 
----
+## 3. Full project architecture
 
-## 三、架构图（flowchart）— 完整版（项目级）
-
-**用途：** 项目级模块地图，`.scratch/architecture.md`。
-
-**模板：**
+Use a flowchart for the map in `.scratch/architecture.md`.
 
 ```mermaid
 flowchart TB
@@ -101,19 +85,11 @@ flowchart TB
     svc --> ext
 ```
 
-**约束：**
-- 泳道用 `subgraph "NN / 职责方"`（01/02/EX/04...）
-- 一条横向主流程，分支/分派走纵向
-- 节点文本带类型标记 + 名称（可选 `|HTTP/SQL|` 关系标签）
-- 6-12 个主组件；系统外组件单独泳道或标注"系统外"
+Use `subgraph "NN / responsibility"` swimlanes such as 01/02/EX/04. Keep one horizontal main path; branches/dispatch extend vertically. Nodes contain type/name and optionally `|HTTP/SQL|` relationship labels. Aim for 6–12 main components; put external systems in a separate lane or mark them external.
 
----
+## 4. Feature business workflow
 
-## 四、功能流程图（feature workflow）— flowchart
-
-**用途：** 嵌入 spec 的“方案概述”，让读者看懂功能从入口到结果如何流转，包括关键判断、失败和退出路径。模块改动范围用文字清单记录。
-
-**模板：**
+Embed in the Spec approach to explain entry-to-outcome behavior, meaningful decisions, failures, and exits. Module changes remain a prose list, not this graph's backbone.
 
 ```mermaid
 flowchart TD
@@ -131,19 +107,11 @@ flowchart TD
     visible --> done
 ```
 
-**约束：**
-- 入口/结束使用圆角节点，业务动作用矩形，条件用菱形，分支箭头写明条件或用户选择
-- 用领域词典中的业务术语，不把模块名、接口路径、数据库或文件依赖作为流程主干
-- 只画已确认的分支；登录、校验、重试等按具体需求决定，不因模板示例而自动加入。未明确的路径标注待确认
-- 用户重试与自动重试分别表述，失败与取消有明确去向，不把业务循环画成无条件无限循环
+Use rounded start/end nodes, rectangular actions, diamonds for decisions, and edge labels for conditions/user choices. Use domain glossary terms rather than file/database/API dependencies as the main flow. Show only confirmed branches; do not invent login, validation, or retry merely because a template contains them. Mark unresolved paths. Distinguish user retry from automatic retry, give failure/cancellation clear destinations, and do not turn business loops into unconditional infinite cycles.
 
----
+## 5. Cross-responsibility workflows
 
-## 五、流程/泳道图（跨职责 workflow）— sequenceDiagram 或 flowchart+subgraph
-
-**用途：** 跨职责方的流程（如 主会话/子agent/人工 协作）。
-
-**模板（sequenceDiagram 泳道化）：**
+Use sequenceDiagram or flowchart+subgraph for responsibilities such as main session/child/user.
 
 ```mermaid
 sequenceDiagram
@@ -158,39 +126,26 @@ sequenceDiagram
     main->>main: 提交
 ```
 
-**约束：**
-- 每列一个职责方，happy path 单调向下
-- 异常/拒绝/重试用 `alt`/`else` 旁路，不混进主流程
+Use one participant per responsibility, with a downward happy path. Put exceptions/rejection/retry in alt/else side paths rather than mixing them into the main flow.
 
----
+## 6. General conventions
 
-## 六、通用约定
+1. Semantics before alignment or appearance.
+2. Business edges identify conditions/choices; call edges identify protocol/action/direction (`|HTTP|`, `(return)`, `(async)`), not an uninformative connection label.
+3. One clear main path. Business branches use decisions and labeled solid edges; sequence branches use alt/else.
+4. Match complexity: architecture flowchart+subgraph, feature flowchart, participant calls sequenceDiagram.
+5. Use fenced mermaid so renderers recognize the source.
+6. Treat diagrams as source and commit them with the relevant Spec/ticket when Git actions are authorized; review evolution through diffs.
 
-1. **语义 > 排版**：先保证结构正确、标签完整，再考虑对齐美观
-2. **标签必带语义**：功能流程标业务条件与选择；调用关系标协议/动作/方向（`|HTTP|`、`(return)`、`(async)`），不写无信息的 `连接`
-3. **单一主干**：先画清晰主线；功能流程用条件节点与带标签的实线分支，时序分支用 `alt`/`else`，不堆砌
-4. **复杂度分档**：架构图用 flowchart+subgraph（第三节）；spec 功能流程用 flowchart（第四节），跨参与者调用用 sequenceDiagram（第二节）
-5. **代码块标注**：统一用 ```` ```mermaid ```` 围栏（渲染器识别）
-6. **进 git**：文本即源码，随 spec/ticket 提交，diff 可见演进
+## 7. Disposable step-by-step presentation
 
----
+On a manual request, turn an **existing** Mermaid diagram into a single-file HTML/SVG presentation with previous/next narration and drawn-stroke animation. Use SVG stroke-dasharray growth, not simulated ink filling. Do not redesign the input diagram; the Spec source remains authoritative.
 
-## 七、手绘风分步演示（评审讲解用）— 单文件 HTML + SVG 描边动画
+Load mermaid.js from a CDN (network required), render SVG, then animate paths. Mark the presentation **throwaway**: it is not committed, added to CI, or maintained as a test.
 
-**用途：** 评审/讲解时，把一张已有的 mermaid 图（flowchart / sequenceDiagram）变成"点按钮、一步步画出来"的手绘演示，帮助听众跟上。线条以"描边生长"动画逐笔出现（选型 A：SVG `stroke-dasharray` 动画，纯前端实时），不是毛笔填墨质感。
+Split by semantics rather than coordinates: a flowchart step is a main-chain segment, branch, or subgraph; a sequence step is a message or a whole alt/loop block. Add one explanatory sentence per step.
 
-**形态：** 单文件 HTML。内嵌 mermaid.js（**走 CDN，需联网**）把图源渲染成 SVG，再对路径做描边生长动画；配上一步 / 下一步按钮，逐步"画出"当前语义段。**临时演示资产，标注 throwaway，不进 git、不进 CI、不进测试。**
-
-**调用：** 主会话手动触发（"把这张图做成手绘分步演示"）。agent 读**已有** mermaid 图 → 拆语义步骤 → 生成单文件 HTML。**不重新设计图**——输入以 spec 里现成的图为准。
-
-**拆步骤约定（语义分段，非按坐标）：**
-- flowchart：每步 = 一个语义段（一条主链 / 一个分支 / 一个子流程 subgraph）
-- sequenceDiagram：每步 = 一条消息（或一个 `alt`/`loop` 块整体）
-- 每步配一句旁白（"这一步在讲什么"），显示在按钮旁
-
-**HTML 模板（已验证可用，agent 只需替换 `SRC` 和 `STEPS`）：**
-
-关键实现点（已实测）：mermaid 渲染后，**节点 id 形如 `g-flowchart-<nodeId>-<n>`**、**边 `data-id="L_<from>_<to>_0"`**。机制 = 初始把各步元素加 `.step-hidden`，逐步移除并给路径写入 `--len`（`getTotalLength()` 量长）触发 `.drawing` 描边动画。subgraph 容器框保持常显。
+The template uses rendered node IDs like `g-flowchart-<nodeId>-<n>` and edge `data-id="L_<from>_<to>_0"`. Initially apply step-hidden; reveal each step and use getTotalLength() to set `--len` for drawing animation. Keep subgraph containers visible. Replace SRC and STEPS in the template:
 
 ```html
 <!DOCTYPE html>
@@ -285,8 +240,4 @@ function restart(){ hideAll(); cur=-1; render(); }
 </html>
 ```
 
-**约束：**
-- **开箱即用优先 CDN**；目标环境完全离线时才把 mermaid 内联进 HTML（文件变大，需说明）
-- 每步动画 **≤1s**，整体步骤数控制在听众可跟随范围（一般 ≤12 步）
-- 交付前 agent 自己在浏览器里跑一遍，确认逐步绘制、prev/next 回退、旁白同步都正常（可用 `pi-agent-browser-native` 或 Playwright MCP 验证）
-- 结果只在评审讲解时用；spec 里仍保留原 mermaid 图源作为单一事实（HTML 是派生物，可重新生成）
+Prefer the ready-to-use CDN; inline Mermaid only for fully offline targets and explain the larger file. Keep each animation at most one second and the overall sequence manageable, generally at most 12 steps. Before delivery, run it in a browser and verify drawing, previous/next navigation, and synchronized narration (e.g. with the available browser/Playwright tooling). The original Spec Mermaid remains the sole source; HTML is a regenerable review aid.

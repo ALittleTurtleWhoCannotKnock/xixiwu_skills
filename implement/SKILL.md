@@ -1,172 +1,134 @@
 ---
 name: implement
-description: 按 ticket 实现并验证改动。主会话确认验证方式、编排与 review，implementer 复用现有测试；行为改动优先 TDD，纯重构做前后回归，文档与配置使用适用检查。适用于有明确执行票的场景。
+description: "Implement and validate a confirmed ticket using appropriate checks and reused tests. The main session reviews evidence and automatically closes engineering-complete tickets; human functional acceptance stays in Plan/Spec and Git commits remain separately authorized."
 ---
 
 # Implement
 
-按 ticket 实现并验证改动。**主会话做编排与决策，执行分派给 `implementer` 子 agent。**
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-## 触发信号
+Implement and validate tickets. The main session orchestrates decisions/review; an implementer performs execution unless inline mode is selected.
 
-- Tickets 已通过 `/to-tickets` 确认
-- 有明确的、可执行的 ticket
-- 需要按票据修改代码、配置或文档
+## When to use
 
-## 核心 Discipline
+Tickets are confirmed, an executable ticket exists, and code/configuration/documentation must be changed.
 
-1. **编排与执行分离** — 主会话选 ticket、确认验证方式、review 和处理提交；子 agent 负责实现与验证
-2. **验证与改动匹配** — 行为改动在约定 seam 处测试；其他改动采用适用检查，优先复用现有测试，不为每票新建测试文件
-3. **决策前置** — spec/ticket/plan 已拍死所有决策；子 agent 遇到未覆盖的决策会停止并报告，不猜测
-4. **决策归属分层** — **技术决策查 plan**（用什么、怎么实现、风险），**产品边界查 spec**（做什么、不做什么、谁负责），**执行细节查 ticket**（seams、测试用例、验收标准）
-5. **plan 发现 spec 不可行 → 回写 spec** — 若实现时发现 spec 的产品决策技术上不可行，**不自行变通**，走"理解纠偏"回写 spec（Step 3.5 修正层级判断），让产品决策与技术现实对齐
-6. **子 agent 不提交** — 提交、简化、人工 checkpoint 都由主会话在提交节点执行
-7. **绝不主动提交或推送** — 未经用户明确指示（"提交"/"推送"），即使看似完成也把改动留在工作区。提交永远经过用户确认（人工 checkpoint），不存在"顺手提交"
+## Core disciplines
 
-## 操作步骤
+1. Separate orchestration from execution.
+2. Match validation to the change and reuse tests rather than creating files per ticket.
+3. Execute settled decisions; report uncovered blocking decisions rather than guessing.
+4. Technical choices belong to the plan, product boundaries to the Spec, and execution details to the ticket; confirmed small tickets contain intentionally omitted decisions.
+5. If the plan cannot meet a product decision, use Step 3.5 understanding correction rather than silently deviating.
+6. Child agents never commit; the main session owns commit cleanup/checkpoints.
+7. Never commit or push without explicit user authorization, even when checks pass.
 
-先读 [共享执行约定](../_agents/workflow-contract.md) 和目标仓库的 tracker 声明，统一字段、状态与依赖判定。
+## Workflow
 
-### Step 1: 选择 ticket（主会话）
+Read the [shared contract](../_agents/workflow-contract.md) and target tracker declaration before interpreting fields, states, or dependencies.
 
-根据依赖关系，选择下一张可执行的 ticket（所有 blocking 已按 tracker 语义解除）。`resolved` 与已声明的 `code-complete` 可解除 ticket 依赖，后者需提示待最终验收；外部验证条件仍单独核实。从 tracker 读取 ticket 的 `Spec:`、`Plan:` 引用；明确标记 `none (原因)` 的小改动使用 ticket 内已确认的决策，不读取被省略的文档。
+### Step 1: Select and claim
 
-有 plan 时读取其文件或独立 Plan issue 正文及对应 P<N>，核实当前方案已有用户批准；issue 已关闭不能代替批准。远程以 issue 正文为主存，不能改读本地副本或把讨论评论当现行方案。
+Select a ticket with all declared blockers satisfied. The current flow releases dependencies on resolved; legacy code-complete follows only declared compatibility semantics and engineering evidence. Verify independent external conditions separately. Follow Spec/Plan references; an explicit none with a reason uses the confirmed small-ticket decisions, not missing-document requests.
 
-**领取 ticket：** 开始执行前，先在 tracker 中将该 ticket 的 `Status:` 从 `ready` 改为 `claimed`，记录当前执行者（本地文件可在状态行后加 `By: <agent/user>`）。如果 ticket 已是 `claimed`，不要抢占，先报告已有执行者；只有明确确认是遗留 claim 才能接管。
+With a plan, read the authoritative local file or independent Plan issue body and P<N>, and verify approval evidence. Native closed state is not approval. Do not substitute a stale local copy or discussion comment for a remote master.
 
-**若 feature 有多个 spec 版本**：本地读 `INDEX.md`；远程读 tracker 的当前版本引用，并与 Plan issue 正文的 `Spec:` 核对。ticket 的 `Spec:` 必须对应本次执行版本；增量版本需背景时沿引用回溯，不把旧版追踪票当作当前执行票。
+Before execution, change ready to claimed in the tracker and record the executor (locally `By: <agent/user>` may accompany Status). Do not take another executor's claim; only explicitly confirmed stale claims may be reassigned.
 
-### Step 2: 确认验证方式与测试落点（主会话）
+For multiple Spec versions, read local INDEX or the remote current-version reference and compare the Plan's Spec. Select the current execution version, consulting older versions only for background.
 
-读取[共享验证规则](../_agents/workflow-contract.md#验证方式与测试组织)，结合 spec/ticket 已确认的要求：
+Resolve the [functional acceptance owner](../_agents/workflow-contract.md#功能验收与票级关闭): Plan, otherwise Spec. Separate human functional acceptance from engineering checks. Align completion conventions before adopting the new flow without resetting historical states. If the user is confirming functional acceptance and no execution work remains, go directly to Step 6 rather than redoing closed tickets.
 
-- 先找已有测试框架、相同 seam 的测试文件、fixtures 与命令，确定可以直接复用或扩展的位置
-- 行为/接口/bug 使用行为测试；纯重构运行前后回归；文档、配置、样式采用对应检查，不强行创建失败测试
-- 记录验证方式及测试落点；相同输入维度用参数化/子测试，只有确实没有合适位置时新增文件并说明理由
-- 行为测试边界确实缺失时补齐必要决策；已有授权沿用。非运行行为不强制定义 seam，但必须说明实际如何验证
+### Step 2: Confirm validation and existing test locations
 
-### Step 3: 实施与验证（默认分派 implementer 子 agent）
+Use the [shared validation rules](../_agents/workflow-contract.md#验证方式与测试组织):
+- Locate the framework, matching seams/files, fixtures, and commands first.
+- Use behavior tests for behavior/API/bugs, before/after regression for pure refactors, and applicable checks for docs/config/styles rather than artificial failures.
+- Record the strategy and test locations; parameterize related cases, explaining genuinely necessary new files.
+- Fill missing behavior-test boundary decisions; reuse existing authorization. Explain checks for non-runtime changes without inventing seams.
 
-**先读执行模式：** 读取 `docs/agents/execution-mode.md`。缺失或内容无法识别（非 `subagent`/`inline`，如被改坏）时默认 `subagent` 并提示用户检查配置。用户可在单次执行时覆盖默认。
+### Step 3: Execute and validate
 
-分派时按[共享执行约定的基础模型规则](../_agents/workflow-contract.md#基础模型)读取并应用用户选择；inline 模式沿用主会话。
+Read execution-mode. Missing/invalid subagent/inline configuration defaults to subagent with a configuration notice; honor a task override. Apply the [selected-model rules](../_agents/workflow-contract.md#基础模型); inline keeps the main-session model.
 
-**默认 / `subagent` 模式 → 分派给 `implementer` 子 agent**，传入：
-- ticket 文件/issue 引用及当前正文（含验收标准、`Blocked by`）
-- 共享执行约定正文与 tracker 的状态声明（注册适配器已附带约定时无需重复传）
-- `Plan:` 引用的本地 plan 或独立 Plan issue 及 P<N> 正文（含技术方案、风险、现有挂接点和目标态锚点）；明确省略时传 ticket 内的技术决策并跳过 plan 锚点检查
-- `Spec:` 引用的文件/issue 及版本内容（含 test seams、产品边界）；明确省略时使用 ticket 内的对应约定
-- commit-strategy 路径
-- 所选验证方式、相关代码、可复用测试/fixtures 与检查命令
+In subagent mode, send the implementer:
+- The current ticket reference/body, criteria, and blockers.
+- The shared contract and tracker state declaration, unless the adapter already appended the contract.
+- The referenced plan/P<N>, decisions, risks, and existing/target anchors. If intentionally omitted, use the ticket decisions and skip plan-anchor checks.
+- The current Spec version, seams, and boundaries, or confirmed small-ticket equivalents.
+- Commit-strategy path, validation approach, code/test/fixture locations, and required commands.
+- The upper acceptance entry and pending human items, separated from mandatory ticket engineering checks.
 
-`implementer` 子 agent 会自治地：确认 blocker 已解 → 复用已有测试并按选定方式实现与验证 → 自 review → 报告验证策略、测试文件变化、实际运行结果与未满足的验收标准。
+The implementer verifies blockers, reuses tests, implements/validates, reviews its diff, and reports real results and unmet criteria. Wait for its report. Resolve genuinely missing decisions with the user before redispatching. A reported wrong technical direction follows Step 3.5 rather than blind retries or abandonment.
 
-**主会话等待子 agent 报告。** 若子 agent 报告"缺少某决策导致无法继续"，主会话与用户澄清该决策后，可将澄清结果重新分派给子 agent 继续。
+Inline execution follows `_agents/implementer.prompt.md` directly. The same prompt/shared validation contract governs both modes.
 
-**若子 agent 报告"ticket 的技术方向在现有架构中不成立"**（不是信息缺失，而是方案本身错了，如把某能力安错了通道），进入 **Step 3.5 修正流程**，不要直接重做或放弃。
+### Step 3.5: Correct a wrong direction
 
-**`inline` 模式 / 用户单次覆盖 → 主会话直接执行**：参照 `_agents/implementer.prompt.md` 中相同的实现与验证规则，不重启子进程。
+Use when the ticket's technical approach conflicts with actual architecture or when an anchor that should already exist has unexpectedly moved/disappeared. A future target not yet due is not an error; honor its creation phase.
 
-> 执行逻辑的单一事实源是 `_agents/implementer.prompt.md`，验证分类与测试组织见共享约定；两种模式只是执行主体不同。各工具通过 `adapters/` 注册子 agent 后，用对应分派机制启动。
+1. Inspect actual architecture, channels, flow, and boundaries. Explain why the assumption fails; locate unexpectedly renamed/moved symbols.
+2. Update the plan's technical entry/anchors first, or the small ticket's decisions when no plan exists. Revise affected ticket scope/criteria and add the old assumption, correction, and architectural evidence. Do not duplicate method anchors into the ticket.
+3. Determine whether to revise the Spec:
 
-### Step 3.5: ticket 方向修正（主会话）
+| Correction | Meaning | Spec action |
+|------------|---------|-------------|
+| Understanding correction | Changes how the approach really works: channel, responsibility, or flow | Must update the Spec |
+| Implementation detail | Names/parameters/internal structure without changed meaning | Keep in ticket/plan |
+| New constraint/boundary | Compatibility, debouncing, validation, etc. | Update Spec if it affects later work or requirement understanding |
 
-当 ticket 的技术落地方向在现有架构中不成立时（此时 spec 大方向通常没错，是 ticket 理解错了），**或当按计划应已存在的锚点在当前代码里找不到**（非预期改名/挪位/删除）：进入本流程。尚待本票或后续票生成的目标态缺失不算方向错误，按 plan 声明的生成阶段检查。
+If the plan is technically unable to satisfy a product decision, report the conflict and obtain user confirmation before changing that product decision. Update the same plan body too.
 
-**1. 对齐现有架构**
-
-摸清真实的现有结构（调用通道、数据流、边界），确认 ticket 原方案为何在此架构下不成立。锚点腐化情形下：确认目标方法的当前实际位置/名称。
-
-**2. 修正 ticket**
-
-技术方向或锚点变化先更新 `Plan:` 引用的条目；无 plan 时更新 ticket 内的技术决策。必要时同步 ticket 的执行描述与验收标准，并追加**修正记录**（"原方向 X 为何不成立 → 修正为 Y"+ 架构依据），不把 plan 锚点复制进 ticket。
-
-**3. 修正层级判断（关键：防止 spec 与 ticket 脱节）**
-
-判断该修正属于哪类，决定是否回写 spec；明确省略 spec 的小改动在 ticket 的对应决策处修正：
-
-| 修正类型 | 特征 | 是否回写 spec |
-|---------|------|--------------|
-| **理解纠偏** | 改变了"方案实际如何工作"的认知（如能力安错通道、数据流理解错） | ✅ **必须回写**。否则 spec 停在错误认知上，后续会重犯 |
-| **实现细节** | 换函数名、调参数、改内部结构，不改变方案语义 | ❌ 不回写。spec 管"做什么/为什么"，不管哪行代码 |
-| **新增约束/边界** | 发现需防抖、兼容旧数据、额外校验等 | ⚠️ 若影响后续 ticket 或需求理解则回写，否则留 ticket |
-
-**判断标准：这个修正会不会改变"后来者对需求/方案的理解"？会 → 回写；只是实现细节 → 留 ticket。**
-
-**plan 发现 spec 不可行时（特殊情形）：** 若 plan 的技术路径与 spec 的产品决策冲突（技术上做不到产品要的），**不自行变通**——把冲突上报，走"理解纠偏"路径**回写 spec**（修订产品决策，让产品与技术现实对齐），同时 plan 就地更新技术路径。此时涉及产品决策修订，必须经用户确认后才改 spec。
-
-**4. 回写 spec（仅理解纠偏 / 必要的约束时）**
-
-更新 spec 对应处（方案概述 / 功能流程图 / 时序图 / 相关决策行），保持 **spec 始终是"最准的事实源"**。本地改文件，远程改对应正文；Plan 的技术修正写回同一 Plan issue 正文，不追加成 Spec 评论。在相关处加一行轻量变更说明：
+4. For understanding corrections/necessary constraints, update the current Spec's approach, business flow, sequence, or decisions. Write locally or to the authoritative remote body; technical plan corrections stay in the independent Plan body, not Spec comments. Example stamp:
 
 ```
 > 修正（ticket NN）：[一句话说明修正内容 + 依据]。原理解 [X] 在现有架构不成立，修正为 [Y]。
 ```
 
-**注意：** 这是 spec 的"就地纠偏"（ticket 未实现，spec 还是当前工作文档），直接改当前 spec，**不叠版本**。叠版本（spec-v2）是 `/amend` 处理的"已实现 + 需求演进"场景，与此不同。
+This corrects a still-working Spec in place, without a new version. `/amend` versions already implemented requirements.
 
-**5. 重新分派（带循环退出）**
+5. Redispatch the corrected ticket. If the same ticket produces direction errors on **two consecutive attempts**, stop automatic correction/redispatch. Request human alignment or a return to `/to-spec`; do not loop indefinitely.
 
-按修正后的 ticket 重新分派 implementer 执行。
+### Step 4: Review engineering completion
 
-**循环退出：** 若修正后的 ticket 再次被报方向错误（同一 ticket 连续 ≥2 次 direction error），**停止自动修正**，不再重新分派。此时说明问题不是 ticket 落地理解偏差，而是 spec 层面的方案有问题，提示用户：人工介入对齐，或回退到 `/to-spec` 重新审视方案。不要在"修正-分派-再报错"里空转。
+Check the report on two axes:
 
-### Step 4: 验证（主会话）
+**A. Completion:** Does code satisfy this ticket's scope and engineering criteria? Hand outstanding product/experience/functional-device acceptance to Plan/Spec with provenance; it does not block an engineering-complete ticket. Required engineering checks must actually pass; explain inapplicable checks. Review test reuse, justified additions, cleaned temporary probes, and real behavior coverage at the agreed seam.
 
-核对子 agent 的报告，分两个层面：
+**B. Evidence-based findings:**
 
-**A. 完成度核对：**
-- 代码行为是否覆盖验收标准？区分自动验证已通过的项目与仍待人工/真机验证的项目，后者只允许停在 code-complete
-- 约定的必要检查是否实际通过，不适用项是否有依据？失败或未运行的必要检查仍阻塞完成
-- 是否复用了现有覆盖？新增测试文件有无必要，临时探针是否清理？行为测试是否在约定 seam 验证真实行为？
+| Severity | Meaning | Action |
+|----------|---------|--------|
+| P0 | Blocks completion: Spec conflict, failed tests, or drift | Fix before closing |
+| P1 | Should fix before release: concrete smells/boundary gaps | Record and decide whether to fix now |
+| P2 | Informational/readability note | Record without blocking |
 
-**B. 问题分级审查（决定能否进提交节点）：**
+Check drift against both product and technical decisions. Treat deviations as P0 and confirm whether to fix implementation or explicitly revise decisions. Invent no findings; state that there are no blockers when appropriate. Return P0/P1 for correction or a user decision.
 
-按证据列出当前 diff 引入的问题，分三级：
+**After each ticket, without waiting for human acceptance or a commit:**
+- For external HTTP endpoints, first generate required `/to-api-contract` deliverables for integration.
+- When implementation, mandatory engineering checks, review, and required artifacts pass, the main session writes `Status: resolved`. Locally retain evidence; remotely call close and reread native state. Do not request per-ticket user acceptance.
+- Register remaining human functional items in Plan/Spec, or the shared small-change handoff when both are omitted. Failed/unrun engineering checks remain claimed and cannot be moved upward to justify closure.
+- Record commands/results, change location, and Git facts; release dependencies and continue eligible work. If native close fails, report engineering complete/native still open and the actual cause; do not claim closure or reimplement passed work.
 
-| 级别 | 含义 | 处理 |
-|------|------|------|
-| **P0** | 阻塞合并的问题（如实现与 spec 矛盾、测试未过、偏离既定决策） | 必须修复后才可进提交节点 |
-| **P1** | 发布前应修的问题（如明显 smell、缺失的边界处理） | 记录并决定是否本次修 |
-| **P2** | 备注类（如可读性建议） | 仅记录，不阻塞 |
+### Step 5: Cleanup and commit independently
 
-**Drift check：** 对照 spec 既定决策 **和 plan 技术决策**，当前实现是否发生偏离？（长流程中主会话/子 agent 可能悄悄偏离拍死的方案）。发现偏离按 P0 处理，需与用户确认是修正实现还是显式修订 spec/plan。
+Read commit-strategy; if absent, request initialization. Per-ticket handles a commit point after each Step 4; squash handles it after all execution tickets resolve. Parked, unknown, or failed work is not complete.
 
-只报告有证据支撑的问题，不发明问题。全部合格时明确说"无阻塞问题"。如有 P0/P1，退回子 agent 修正或退回用户决策。
+Commit/push still requires explicit authorization. If the user defers committing, or this task is not preparing a commit, leave the working tree and record the later Git work. Do not force cleanup or a Git checkpoint merely to close tickets; continue eligible engineering work.
 
-**每票验证后的状态与产出（不等待提交）：**
+When preparing a commit, reuse existing explicit authorization:
+1. Invoke `/simplify` under execution-mode, scoped by commit-strategy and the user's limits.
+2. Rerun checks after cleanup and regenerate changed contracts. Reopen affected tickets and recheck downstream dependencies on actual engineering regression; human functional checks stay above.
+3. Present results and handle the human commit checkpoint. Commit only when explicitly authorized; otherwise preserve changes.
+4. A deferred commit does not undo Step 4 closure. Reopen only for actual engineering issues. Keep Git, ticket completion, and functional acceptance distinct.
 
-- 代码与必要自动检查实际通过后，按 tracker 声明将 `claimed` 更新为 `code-complete`，列出剩余人工/真机验收和收尾 checkpoint；失败或未运行的必要自动检查保持 `claimed`。旧 tracker 未声明中间态时，先补齐状态约定，不写入未知状态或提前标 `resolved`。
-- 立即按共享约定更新依赖，允许下一票依赖已声明的 `code-complete`；未满足的外部条件仍阻塞。
-- 涉及对外 HTTP 端点时，此时触发 `/to-api-contract` 产出契约，供后续联调；不推迟到 squash 提交之后。
+### Step 6: Upper-level functional acceptance
 
-### Step 5: 清理与提交（主会话）
+After execution tickets finish, hand the user the Plan/Spec acceptance entry and pending items. Show engineering complete/awaiting functional acceptance; keep pending and the parent open until actual user confirmation.
 
-**提交节奏由 `docs/agents/commit-strategy.md` 决定**（缺失则提示先运行 `/init-dev-flow`）：
+On explicit acceptance, check the current version and engineering completion, record accepted plus evidence at the single owner, then close that acceptance item. Approach approval or Git authorization is not acceptance. Feedback records changes-requested and leads to scoped follow-on/regression tickets. Missing records remain unknown rather than inferred from closed tickets.
 
-- **per-ticket** → 每张 ticket 达到 `code-complete` 后进入收尾流程
-- **squash** → 逐票完成 Step 4，待执行票全部达到 `code-complete` 或 `resolved` 后统一收尾；`parked`、未知状态及未通过验证的票不能算完成
+## Outputs and completion
 
-**提交流程（到达提交节点时）：**
-
-> 提交与推送永远需要用户明确确认。即使所有检查通过，也先停在人工 checkpoint，绝不自动提交。
-
-1. 触发 `/simplify`（其内部会分派 `simplifier` 子 agent 清理，scope 由 commit-strategy 决定）
-2. 清理有改动时重跑相关验证；若接口改变，同步重生成契约。核实所有必需验收，保留未完成的人工/真机项
-3. 展示结果并处理**人工 checkpoint**。用户明确授权提交后才执行 Git 提交；用户选择暂不提交则记录该选择，保留工作区改动
-4. 所有必需验收通过且收尾 checkpoint 已处理后，才将对应票标为 `resolved`。仍待最终验收的票保持 `code-complete`；必要自动验证失败时退回 `claimed` 并重新检查受影响的下游依赖。提交记录与验收状态分别维护
-
-## 产出物
-
-- 完成的改动及适用验证证据；有回归价值的行为测试保留在现有体系中
-- Review + simplify 结果，以及经明确授权的提交或保留工作区的记录
-- 更新的 ticket 状态
-- （涉及端点的后端 ticket）对应接口契约片段 `.scratch/<feature-slug>/contracts/<ticket-slug>.md`
-
-## 完成标准
-
-- 所有 ticket 完成
-- 所有适用的必要检查通过，失败、未运行和待人工验证项如实记录，不能提前标记最终完成
-- 子 agent 报告验收标准全满足
-- simplify 清理完成并经用户确认
+Deliver verified changes, maintained useful coverage, review/cleanup results, actual ticket/closure state, Git authorization/working-tree facts, and any required contract fragments. A ticket is resolved by engineering completion; a feature is accepted by explicit user functional confirmation; a commit follows its separate authorization/checkpoint.

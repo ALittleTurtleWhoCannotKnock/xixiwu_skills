@@ -22,11 +22,11 @@ For remote trackers, the supervisor supplies the referenced issue bodies or acce
 3. **Use the agreed validation strategy.** Follow the shared contract's change-type matrix and any required checks in the ticket/spec/plan. For behavior changes, test at the agreed seam; for non-behavior changes, use the applicable checks and explain why a runtime seam is inapplicable. Report genuinely missing acceptance decisions, not intentionally omitted documents or inapplicable test layers.
 4. **Reuse tests before creating files.** Inspect the existing suite and fixtures first. For behavior changes and bug fixes, reuse or extend a meaningful failing case, implement the smallest fix, then refactor with tests green. Pure refactors use before/after regression; docs, configuration, and presentation changes use their applicable checks. Do not create a file per ticket, function, or assertion. Group related inputs with the existing framework's parametrization/subtests, and justify any new test file.
 5. **Smallest correct change.** Follow existing codebase patterns. No speculative scaffolding, no future-proofing, no placeholder code, no silent scope expansion.
-6. **Verify before declaring done.** Run all applicable required checks and acceptance criteria. Never downgrade a required test after it fails, copy implementation details into assertions to make it pass, or report unrun checks as passing. Existing tests that already demonstrate the acceptance behavior need no duplicate.
+6. **Verify before declaring done.** Run all required engineering checks and verify the ticket's engineering criteria. Report outstanding user functional acceptance separately; it does not replace a failing or unrun engineering check. Never downgrade a required test after it fails, copy implementation details into assertions to make it pass, or report unrun checks as passing. Existing tests that already demonstrate the acceptance behavior need no duplicate.
 
 ## Workflow
 
-1. Read the ticket, available spec/plan, and inherited context. Check every blocker using the tracker/shared contract: `resolved` and declared `code-complete` can release ticket dependencies; `code-complete` requires a pending-verification warning. External verification conditions must be satisfied separately. Unknown, conflicting, or unresolved blockers stop execution. The supervisor sets `Status: claimed`; do not take a ticket claimed by someone else.
+1. Read the ticket, available spec/plan, and inherited context. Check every blocker using the tracker/shared contract: the current flow releases dependencies on `resolved`; legacy `code-complete` follows only its declared compatibility semantics and recorded evidence. External verification conditions must be satisfied separately. Unknown, conflicting, or unresolved blockers stop execution. The supervisor sets `Status: claimed`; do not take a ticket claimed by someone else.
 2. **Verify change anchors at their declared phase.** With a plan, check existing attachment points before starting. Check target-state symbols only after the ticket or prerequisite responsible for producing them is complete; targets assigned to later tickets need not exist yet. Report a missing anchor as a **direction error** only when it should already exist, naming the anchor and actual findings. For an explicitly omitted plan, skip plan-anchor checks. Do not guess substitute locations.
 3. Inspect existing tests and validation commands, then record the strategy and test locations. Respect the agreed seam for behavior changes. Do not change an agreed validation requirement merely to avoid a failing check.
 4. Implement using that strategy: behavior changes use red-green-refactor in existing tests where possible; pure refactors use before/after regression; other changes use the shared contract's applicable checks. Choose cases by uncovered behavior, not by a need to create new files. Temporary probes belong in a system temp directory; retain useful regression coverage in the existing suite.
@@ -36,7 +36,7 @@ For remote trackers, the supervisor supplies the referenced issue bodies or acce
    - You NEVER commit or stage yourself, and NEVER run simplify — those are the supervisor's job, gated by a human checkpoint.
    - `per-ticket` → leave changes in the working tree; report that the supervisor will run simplify + human-checkpoint + commit for this ticket.
    - `squash` → leave changes uncommitted; report the accumulated changes.
-8. Return the structured report. After implementation and required automated checks pass, the supervisor may record the tracker's declared `code-complete` state and release ticket dependencies independently of Git submission. Final `resolved` requires all mandatory acceptance checks and the closing checkpoint; failed/unrun required automated checks remain `claimed`. Never invent an undeclared state or use `resolved` to hide pending verification.
+8. Return the structured report. Once this ticket's implementation, required engineering checks, review, and required deliverables pass, the supervisor records `resolved` and closes the ticket without waiting for user functional acceptance or Git permission. Do not close issues or change tracker state yourself. Hand off outstanding product, usability, or functional device acceptance to the current Plan, or Spec when there is no Plan. Failed or unrun required engineering checks still block completion and remain `claimed`; do not reclassify them as product acceptance. The supervisor verifies native remote closure separately and reports any synchronization failure. Never invent a tracker state or mark a parent accepted because its tickets passed.
 ## Report back
 
 End with a structured report in exactly this shape:
@@ -48,8 +48,9 @@ Changed files: <list>
 Validation strategy: <selected approach and why it fits the change>
 Test changes: <existing tests reused/extended; any new test files and why; or why none were needed>
 Validation: <actual commands/results, applicable type-checks, inapplicable checks with reasons>
-Pending verification: <required manual/device checks or checkpoints still pending; or none>
-Acceptance: <each criterion → met / NOT met + why>
+Pending verification: <unfinished required ticket engineering checks; or none>
+Feature acceptance: <Plan/Spec reference and outstanding human functional checks; or existing feature record/report when both are intentionally omitted>
+Acceptance: <each ticket engineering criterion → met / NOT met + why; user functional checks belong in Feature acceptance>
 Findings: <P0/P1/P2 issues found in your own diff, with evidence; or "No issues found.">
 Drift check: <any deviation from spec/plan-settled decisions, or "none">
 Open risks: <R, or "none">

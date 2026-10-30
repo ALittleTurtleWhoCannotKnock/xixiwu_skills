@@ -1,134 +1,146 @@
 ---
 name: to-plan
-description: 在 spec 与 tickets 之间产出实施蓝图，本地保存 plan.md，GitHub/GitLab 保存独立 Plan issue。确定技术选型、实现路径和风险，经用户批准后交给拆票。适用于 spec 已确认、即将拆票前的方案规划。
+description: "Build an implementation blueprint between a confirmed Spec and ticketing. Save local plan.md or an independent remote Plan issue, settle technical choices, paths and risks, and obtain user approval before execution tickets."
 ---
 
 # To Plan
 
-## 触发信号
+Follow the target project’s interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-- Spec 已通过 `/to-spec` 确认
-- 即将进入 `/to-tickets`，需要先明确技术选择、实现路径和风险
-- 希望先评审实施方案，再据此拆票和实现
+## When to use
 
-## 核心 Discipline
+- The Spec has been confirmed through `/to-spec`.
+- Technical choices and an implementation path must be settled before `/to-tickets`.
+- The user wants to review the approach before tickets and implementation.
 
-1. **明确决策归属** — spec 记录产品意图与边界；plan 确定技术选择、算法和实现路径，作为拆票与实现的依据
-2. **先评审，再拆票** — plan 必须经用户批准，才能进入 `/to-tickets`；已有针对当前方案的明确批准可直接沿用
-3. **plan 是单一现行文档** — 本地更新同一 `plan.md`；远程更新同一独立 Plan issue 正文，不做 plan-vN、不把现行方案放进 Spec 评论。演进原因留在变更记录中
-4. **明确不确定项** — 区分已知事实、方案选择与待验证假设；说明风险影响及验证方式，不把未经验证的判断写成结论
+## Core disciplines
 
-## 操作步骤
+1. **Separate decisions.** The Spec owns product intent and boundaries. The plan settles technical choices, algorithms, and implementation paths for ticketing and implementation.
+2. **Review before ticketing.** The user must approve the plan before `/to-tickets`. Reuse explicit approval already given for the current approach.
+3. **One current plan.** Update the same local `plan.md` or independent remote Plan issue body. Do not create plan-vN or keep the current approach in Spec comments. Record reasons for changes in the change history.
+4. **Expose uncertainty.** Distinguish facts, choices, and assumptions to verify. State each risk's impact and validation method; do not present untested assumptions as conclusions.
 
-### Step 0: 确定 tracker 与现有引用
+## Workflow
 
-读取 `docs/agents/issue-tracker.md` 和[共享执行约定](../_agents/workflow-contract.md#tracker-产物与-plan-引用)。找到本次 Spec 的文件/issue 引用及已有 `Plan:`；复用既有 Plan issue，不因重试或 amend 重复创建。tracker 缺失时提示先初始化，不能自行决定写到评论或本地文件。
+### Step 0: Locate the tracker and existing references
 
-### Step 1: 侦察代码上下文（可复用 scout）
+Read `docs/agents/issue-tracker.md` and the [shared workflow contract](../_agents/workflow-contract.md#tracker-产物与-plan-引用). Locate this Spec's file/issue reference and existing `Plan:`. Reuse an existing Plan issue rather than creating duplicates on retries or amend. If the tracker declaration is missing, request initialization; do not choose comments or local storage yourself.
 
-复用 `/to-spec` 的 context 简报（本地通常为 `.scratch/<feature-slug>/context.md`，远程读取关联材料）。若不存在且需要更细的代码理解，按 execution-mode 分派 `scout` 补侦察；临时简报不作为远程 plan 的第二份主存。
+### Step 1: Reuse or gather code context
 
-### Step 2: 合成实施蓝图
+Reuse the `/to-spec` context brief: usually `.scratch/<feature-slug>/context.md` locally, or linked material remotely. If it is missing and more code detail is needed, use `scout` according to execution-mode. A temporary brief is not a second authoritative copy of a remote plan.
 
-合成 plan 正文，按 tracker 保存为本地文件或独立 issue。写作时遵循：
+### Step 2: Draft the implementation blueprint
 
-- **先说方案，再解释依据**：开头简要说明准备如何实现、复用什么、主要改动在哪里；产品背景链接 Spec，不复述整份需求
-- **用具体动作和结果表达**：写“保留现有 CSV 调用，增加 JSON 输出”，避免“大致处理相关逻辑”“完善整体能力”等无法判断范围的说法
-- **每条信息只说明一次**：技术选择在决策表解释，包内引用对应条目；文件和方法位置集中写在改动锚点，其他字段只补充不同信息
-- **按实际需要展开**：只比较有实际取舍的选项，不为填表虚构备选方案；没有独立内容的复用点、额外文件或风险不重复列出
+Save the plan body as a local file or independent issue according to the tracker. Write it as follows:
 
-以下方括号为写作提示，不保留在最终正文中：
+- **Lead with the approach, then explain why.** Briefly state how to implement, what to reuse, and where the main changes go. Link product background to the Spec rather than repeating the requirements.
+- **Use concrete actions and outcomes.** For example, “保留现有 CSV 调用，增加 JSON 输出”. Avoid vague statements whose scope cannot be assessed.
+- **State each fact once.** Explain technical choices in the decision table and reference them from packages. Centralize file and method locations in change anchors; other fields should add distinct information.
+- **Expand only where useful.** Compare real alternatives with actual tradeoffs. Do not invent options to fill the table or repeat reuse points, extra files, or risks that add no information.
+
+Bracketed text below is authoring guidance; remove it from the final body.
 
 ```markdown
 # <Feature> 实施蓝图
 
-Parent: <当前 Spec 文件或 issue 引用>
-Spec: <当前 Spec 文件或远程版本引用>
+Parent: <current Spec file or issue reference>
+Spec: <current Spec file or remote version reference>
 **状态**: 待 review
+Acceptance: pending
 
 ## 方案概述
 
-[用一小段话概括推荐方案：复用哪些现有能力、增加或调整什么、完成后如何满足 Spec。需要的背景直接链接 Spec]
+[Briefly describe the recommended approach: existing capabilities reused, changes introduced, and how the result satisfies the Spec. Link to the Spec for background.]
 
 ## 技术决策表
 
 | 决策点 | 选项 | 选择 | 理由 |
 |-------|------|------|------|
-| [需要确定的问题] | [实际考虑过的方案] | [明确的选择] | [结合现有代码与约束说明取舍，必要时简述未选方案的不足] |
+| [Decision needed] | [Real alternatives] | [Chosen approach] | [Tradeoffs based on existing code and constraints; explain rejected alternatives where useful] |
 
 ## 包分解
 
-### P1: <包名，对应一张或多张 ticket>
-**交付结果**：[说明本包完成后具备什么能力、保留什么既有行为，让读者能判断交付范围]
-**技术选择**：[引用决策表中的相关条目，补充本包特有的选择，不重复整段理由]
-**实现思路**：[按因果或实施顺序说明如何完成，明确各部分的职责和衔接，不展开代码与逐项测试步骤]
+### P1: <package name, corresponding to one or more tickets>
+**交付结果**：[Capability delivered and existing behavior preserved; make scope assessable.]
+**技术选择**：[Reference decision-table entries and add only package-specific choices.]
+**实现思路**：[Explain the causal implementation path, responsibilities, and connections; leave code and individual test steps to tickets.]
 **改动锚点**：
-- [现有挂接点 `文件#方法名` → 目标态 `文件#方法名`；说明行为变化及由本包/前置 P<N> 生成]
+- [Existing attachment point `path#method` → target `path#method`; explain the behavior change and whether this package or a prerequisite P<N> creates the target.]
 
-**其他关键文件**：[仅补充锚点未覆盖的修改/新增文件，无则省略]
-**复用点**：[仅补充前文尚未说明的现有能力，无则省略]
-**风险点**：[具体风险 → 可能影响 → 验证方式；已有全局说明时引用，不重复展开]
+**其他关键文件**：[Other changed/new files not covered by anchors; omit if none.]
+**复用点**：[Additional reuse not already explained; omit if none.]
+**风险点**：[Specific risk → impact → verification; reference global risks instead of repeating them.]
 
 ### P2: ...
+
+## 功能验收
+
+- [User-confirmed functional acceptance items from the Spec, linked to packages or tickets; track outstanding human experience/device acceptance here.]
+- 验收记录：[Actual user confirmation or feedback. If not yet accepted, state that clearly; approach approval is not functional acceptance.]
 ```
 
-**包分解的内容边界：**
-- plan 的包说明交付结果、技术选择、实现思路与风险
-- ticket 说明测试 seam、具体用例、执行范围和验收标准
-- 方案理由集中写在 plan，ticket 通过引用获取；逐项执行与测试细节留给 ticket
-- 改动锚点只描述位置与行为，不写行号、代码体或伪代码。现有挂接点开工前检查，目标态在对应 ticket/前置包完成后检查；后续票的目标不要求提前存在。纯新增模块无现有方法时写实际存在的模块/目录挂接点
-- **改动锚点是唯一的定位事实源**：方法名只写在 plan 的"改动锚点"字段（ticket 用 `Plan:` 引用该文件/issue 及 P<N>，不复述）。amend/Step 3.5 发现非预期的方法改名/挪位时就地更新锚点；保留已约定的目标态及生成阶段，避免把尚未实施的目标误判为腐化
+**Content boundaries:**
 
-**plan 条目与 ticket 的对应关系：默认 1:1，允许 1:N**（一个包拆多张 ticket）。本地票写 `Plan: plan.md#P<N>`，远程票写 `Plan: <Plan issue 引用> / P<N>`；spec 版本单独写在 `Spec:` 字段。
+- Packages describe deliverables, technical choices, implementation paths, and risks.
+- Tickets own test seams, specific cases, execution scope, and engineering completion criteria.
+- Keep rationale in the plan and reference it from tickets. Detailed execution and tests belong to tickets.
+- Anchors describe locations and behavior, without line numbers, code, or pseudocode. Check existing attachment points before work; check targets after the responsible ticket or prerequisite creates them. Targets assigned to later tickets need not exist yet. For new modules without existing methods, name a real module/directory attachment point.
+- **Change anchors are the sole location source.** Method names belong only in the plan's change-anchor field; tickets reference the file/issue and P<N> through `Plan:` without copying methods. If amend or implementation Step 3.5 detects unexpected renames/moves, update anchors in place, preserving agreed targets and their creation phase. Do not mistake not-yet-implemented targets for stale anchors.
 
-### Step 3: 风险与验证策略
+**Package-to-ticket mapping defaults to 1:1 and allows 1:N.** Local tickets use `Plan: plan.md#P<N>`; remote tickets use `Plan: <Plan issue reference> / P<N>`. Keep the Spec version in its separate `Spec:` field.
 
-- **风险点**：各包说明自身风险；跨包风险集中写在包分解之后。未经实测的判断标为待验证，并说明需要什么证据才能确认
-- **验证策略**：说明如何从整体确认方案成立，包括关键路径、兼容行为与跨模块交界。具体测试用例由 ticket 补充
+### Step 3: Cover risks and validation
 
-### Step 4: 保存草案并评审
+- Describe package risks in their packages; place cross-package risks after package decomposition. Label untested judgments and state what evidence would confirm them.
+- Explain how to validate the overall approach, including critical paths, compatibility, and cross-module boundaries. Tickets add concrete test cases.
 
-先保存一份可 review 的草案，再展示给用户：
+### Step 4: Save a reviewable draft
 
-- 本地：写入 `.scratch/<feature-slug>/plan.md`；在当前 Spec 回填 `Plan: plan.md`，更新 `INDEX.md` 的当前规格与方案链接及 `.scratch/README.md` 的 feature 入口，保留历史规格和已登记 tickets。
-- GitHub/GitLab：使用 tracker 对应工具创建或更新**独立 Plan issue 的正文**，正文关联当前 Spec，并将返回的 Plan issue 引用写回 Spec 正文。已有仅存于评论中的 plan 时按共享约定迁移，保留历史证据。
-- 按[归属层级与列表约定](../_agents/workflow-contract.md#归属层级与列表展示)记录 `Parent:`。GitHub 将 Plan 设为 Spec 的原生子 issue，采用 `[Plan]` 标题和对应类型标签；重试先查询并复用现有关系。工具能力、权限或父级冲突导致未同步时明确报告，不把正文互链当作成功。
-- 正文标 `**状态**: 待 review`；已有针对当前方案的明确批准时可直接记录为已批准，不重复询问。未批准时保存草案并等待 review，不拆票。
+Save the draft before presenting it:
 
-展示文件/issue 的可访问引用及以下要点：
+- **Local:** Write `.scratch/<feature-slug>/plan.md`. Backlink `Plan: plan.md` from the current Spec, update `INDEX.md` and the feature entry in `.scratch/README.md`, and preserve historical Specs and registered tickets.
+- **GitHub/GitLab:** Create or update the **independent Plan issue body** through the declared tracker tool. Link the current Spec and backlink the returned Plan reference from the Spec body. Migrate plans previously kept only in comments according to the shared contract, retaining historical evidence.
+- Follow the [ownership and navigation rules](../_agents/workflow-contract.md#归属层级与列表展示) for `Parent:`. On GitHub, make the Plan a native sub-issue of the Spec, with a `[Plan]` title and the relevant type label. Query and reuse relationships on retries. Report capability, permission, or parent conflicts; Markdown links alone do not prove native synchronization.
+- Under the [functional acceptance rules](../_agents/workflow-contract.md#功能验收与票级关闭), the Plan owns functional acceptance, initially `Acceptance: pending`. If the current Spec already owns acceptance records, move them into the same Plan and leave an entry link in the Spec. Preserve evidence and avoid two independent states.
+- Mark the body `**状态**: 待 review`. Existing explicit approval of this approach may be recorded directly as 已批准, without asking again. Otherwise save the draft and wait for review; do not create tickets.
 
-- 推荐的技术方案及其主要取舍
-- 各包的交付结果、实施顺序和依赖
-- 尚待确认的决策，以及需要验证的风险
+Present an accessible file/issue reference and highlight:
 
-review 说明只突出影响批准的事项，引用对应条目；不在正文末尾重复整份方案。
+- The recommended approach and principal tradeoffs.
+- Package deliverables, ordering, and dependencies.
+- Decisions still open and risks needing verification.
 
-**用户批准后才进 `/to-tickets`。** 用户要求调整则更新同一本地文件/Plan issue 正文后重新 review；**用户未批准不得拆票**。
+Focus the review summary on what affects approval, referencing the relevant entries. Do not repeat the whole plan at its end.
 
-### Step 5: 保存并交接
+**User approval is required before `/to-tickets`.** Requested changes update the same file/issue body for another review. Never create tickets before approval.
 
-- 更新同一本地 plan 或同一 Plan issue 正文，保留 `Parent:`、`Spec:` 与关联关系；正文记录 `**状态**: 已批准（<日期>）` 及批准依据。本地 INDEX 仅维护导航，不复制批准戳记。
-- 将 plan 的文件/issue 引用交给 `/to-tickets`、`/implement` 与 `/find`，不能只给 Spec issue 或某条讨论评论。
-- 拆票后把 ticket 引用回填 plan，并更新本地 INDEX 或原生子 issue 清单；`/amend` 就地维护同一正文，评论只承载讨论与变更记录。
+### Step 5: Save and hand off
 
-## plan 的内容边界
+- Update the same plan file/issue body, preserving `Parent:`, `Spec:`, and relationships. Record `**状态**: 已批准（<日期>）` and approval evidence. The local INDEX stores navigation, not a copy of the approval stamp.
+- Approach approval permits implementation only. Keep `Acceptance` awaiting actual user functional acceptance; closed tickets or permission to commit do not make it accepted.
+- Preserve existing acceptance state and confirmation records. Reset to pending under amend rules only when confirmed functional/acceptance scope changes, not because the skill reran or its template was reapplied.
+- Hand `/to-tickets`, `/implement`, and `/find` the actual plan file/issue reference, not only the Spec or a discussion comment.
+- Backlink tickets into the plan and update the local INDEX or native sub-issue list. `/amend` maintains the same body; comments hold discussion and change records only.
 
-| 适合 | 不适合 |
-|------|--------|
-| 技术选型（用什么库/算法/路径） | 产品意图、边界、非目标（→ spec） |
-| 实现路径概述 + 风险点 | 执行细节（seams/测试用例/文件行级改动 → ticket） |
-| 跨包的全局技术决策 | 单包的测试用例清单（→ ticket） |
+## What belongs in the plan
 
-## 边界
+| Include | Leave elsewhere |
+|---------|-----------------|
+| Technical choices: libraries, algorithms, paths | Product intent, boundaries, non-goals → Spec |
+| Implementation overview and risks | Seams, test cases, file line details → tickets |
+| Cross-package technical decisions | Individual test cases → tickets |
 
-| 适合 | 不适合 |
-|------|--------|
-| spec 已确认、即将拆票的场景 | 需求未对齐（先 `/grill-with-docs`） |
-| 技术方案需要人工审过的场景 | 小改动一张票就完（直接 `/to-tickets`，无需 plan） |
+## Boundaries
 
-## 与其他技能的关系
+| Use this skill | Use another path |
+|----------------|------------------|
+| The Spec is confirmed and the approach needs planning | Unaligned requirements → `/grill-with-docs` |
+| The approach needs user review before implementation | One-ticket small changes → `/to-tickets`, no plan required |
 
-- **输入**：`/to-spec` 的 spec（产品意图与边界）+ context.md（可选）
-- **输出**：本地 `plan.md` 或独立 Plan issue（含方法级改动锚点），供拆票和实现直接读取
-- **amend**：技术方案演进时更新同一 plan 正文，**改动锚点随方法改名/重构同步更新**；Spec 版本演进沿用 tracker 的约定，Plan 的 `Spec:` 引用同步更新
-- **回写 spec**：若实现时发现 spec 的产品决策技术上不可行，**不自行变通**，走"理解纠偏"回写 spec（复用 `/implement` Step 3.5 的修正层级判断）
+## Related stages
+
+- **Input:** Product Spec, optionally the `/to-spec` code-context brief.
+- **Output:** Local `plan.md` or an independent Plan issue with method-level change anchors, consumed directly by ticketing and implementation.
+- **Amend:** Update the same technical body and anchors as methods move or change names. Keep the tracker's Spec-version convention and synchronize the Plan's `Spec:` reference.
+- **Correct the Spec:** If implementation shows that a product decision is technically infeasible, do not improvise around it. Follow the understanding-correction path in `/implement` Step 3.5, revising the Spec so product intent and technical reality agree.

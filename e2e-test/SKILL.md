@@ -1,114 +1,99 @@
 ---
 name: e2e-test
-description: 为 feature 编写可进 CI、长期维护的浏览器端到端测试。手动触发。先探测项目既有 E2E 测试体系（框架/目录/CI），按其约定写测试并本地跑通。强调稳定选择器与确定性等待纪律，防止 flaky。交互型技能，留主会话编排，写测试可派子 agent。
+description: "Manually create maintained browser E2E coverage for a feature. Discover and reuse the project framework, fixtures, and CI conventions; require stable selectors, deterministic waits, and local headless success."
 ---
 
 # E2E Test
 
-为 feature 产出**可进 CI、长期维护**的浏览器 E2E 测试——不是一次性验证脚本。手动触发。
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-## 触发信号
+Produce maintained browser E2E tests suitable for CI, not disposable verification scripts. **Manually triggered.**
 
-- 用户要求"给某 feature/页面写 E2E 测试"、"加浏览器自动化测试"、"这个流程要有端到端覆盖"
-- 功能实现完成后，需要持久回归测试（区别于 agent 自证的临时脚本）
+## When to use
 
-## 核心 Discipline
+- The user requests browser E2E tests for a feature, page, or flow.
+- A completed feature needs persistent browser regression coverage.
 
-1. **先探测，不写死** — 框架、目录、运行命令都从项目里探测，不假设。无既有体系时才给推荐默认并等用户确认
-2. **服从项目约定** — 复用现有 fixtures、命名、目录、风格，不另起一套
-3. **稳定选择器是硬约束** — flaky 的根源是脆弱选择器，必须强制纪律
-4. **确定性等待** — 用框架 auto-waiting / 显式条件等待，禁止固定 sleep
-5. **跑通才交付** — 没本地跑通过的测试不许交付
+## Core disciplines
 
-## 操作步骤
+1. **Discover the stack.** Read the existing framework, directories, and commands. If none exists, recommend a default and wait for confirmation.
+2. **Follow project conventions** for fixtures, naming, structure, and style.
+3. **Require stable selectors** to prevent flaky tests.
+4. **Wait for conditions**, using framework auto-waiting or explicit waits, never fixed sleeps.
+5. **Run before delivery.** Tests that have not passed locally are unfinished.
 
-### Step 1: 探测测试体系（主会话，可派 scout）
+## Workflow
 
-不写死框架，从项目读出来：
+### Step 1: Discover the E2E setup
 
-- **框架**：读 `package.json` 的 devDependencies + scripts，判断 E2E 栈（`@playwright/test` / `cypress` / `webdriverio` / 无）
-- **既有约定**：找现有 E2E 目录与样例（`e2e/`、`tests/e2e/`、`*.spec.ts` 等），提取：目录位置、命名风格、fixtures/setup、baseURL 配置、是否有 page object 模式
-- **CI 跑法**：读 `.github/workflows/`（或对应 CI 配置）里 E2E 怎么触发、dev server 怎么起、用什么命令
-- scout 可做只读文件发现；状态判断与体系结论由主会话给出
+The main session may use scout for read-only discovery. Inspect:
+- `package.json` devDependencies/scripts for `@playwright/test`, `cypress`, `webdriverio`, or no framework.
+- Existing directories/examples (`e2e/`, `tests/e2e/`, `*.spec.ts`), naming, fixtures/setup, baseURL, and page-object conventions.
+- `.github/workflows/` or equivalent CI configuration: triggers, dev-server startup, and commands.
 
-**若无既有 E2E 体系**：明确告知用户，给出推荐默认（Playwright Test + `e2e/` 目录 + 独立 `playwright.config`），**等用户确认后再从零搭建**。不擅自装依赖、不擅自选定框架。
+Scout returns file discoveries; the main session determines the setup and status.
 
-**探测结果列给用户确认**后再进下一步。
+If there is no E2E setup, explain that, recommend Playwright Test with `e2e/` and a separate `playwright.config`, and **wait for confirmation before setting it up**. Do not install dependencies or select a framework unilaterally. Present the discovered setup for confirmation before continuing.
 
-### Step 2: 明确测试范围（主会话，问用户）
+### Step 2: Confirm scope
 
-不默认全量覆盖。问清：
+Do not assume full coverage. Ask which user path to test (golden path first), which essential edge cases are required (empty/error/permission/boundary states), and which pages/routes are involved.
 
-- 要测哪条**用户路径**（golden path 优先）
-- 哪些**关键 edge case**必须覆盖（空态、错误态、权限、边界输入）
-- 涉及哪些页面/路由
+### Step 3: Write tests
 
-### Step 3: 写测试（按 execution-mode，可派 implementer）
+Follow `docs/agents/execution-mode.md`: normally delegate to an implementer; in inline mode the main session writes them.
 
-默认派子 agent（遵循 `docs/agents/execution-mode.md`），inline 模式则主会话直接写。
+Reuse the discovered framework, directories, fixtures, and style. Extend existing tests for the same page/path and parameterize repeated data dimensions. Create a file only for an independent path or existing split convention, explaining why. Do not create a file per ticket/assertion or remove existing coverage merely to reduce file count.
 
-**复用项目约定**：框架、目录、fixtures、风格与 Step 1 探测到的现状对齐，不另起炉灶。
+**Selector priority:**
+1. `data-testid` attributes.
+2. Semantic role/label locators (`getByRole`, `getByLabel`).
+3. Never fragile CSS classes, deep XPath, or structure-coupled `nth-child` selectors.
 
-优先扩展覆盖同一页面/用户路径的已有测试文件；重复的数据维度采用现有框架的参数化或表驱动用例。独立用户路径或既有拆分约定需要新文件时再创建并说明理由，不按 ticket 或每个断言建文件，也不因文件多删除已有回归覆盖。
+If stable test IDs are missing, list the application locations needing them as accompanying changes; disclose changes to the tested code.
 
-**选择器纪律（硬约束，按优先级）：**
-1. `data-testid` 属性定位（最稳定）
-2. role / label / 语义定位（`getByRole`、`getByLabel`）
-3. **禁止**：脆弱 CSS 类名、深层 XPath、`nth-child` 这类结构耦合选择器
+**Waiting:** Use framework auto-waiting or explicit conditions (`waitFor`, visibility/interactivity assertions). Do not use fixed `sleep(ms)` or hard-coded timeout durations.
 
-若被测代码缺少可稳定定位的 `data-testid`，**列出需要补充 testid 的位置**作为附带改动（改动被测代码需说明，不静默改）。
+**Debugging versus delivery:**
 
-**等待纪律：**
-- 用框架 auto-waiting（Playwright 默认）或显式条件等待（`waitFor`、断言可见/可交互）
-- **禁止**固定 `sleep(ms)` / 硬编码 timeout 等时长
+Headless is the delivery/CI standard. During selector development, a real browser may help inspect DOM rather than guessing:
 
-**调试模式 vs CI 模式：**
+| Context | Mode | Tools |
+|---------|------|-------|
+| Local selector development/debugging | Headed is allowed | `playwright test --headed`, `--debug`, `--ui`, screenshots, traces, or video |
+| Delivered tests / CI | Headless required | Framework defaults; headed mode must not become a prerequisite |
 
-E2E 框架默认 **headless（无头）**——浏览器在后台静默运行，不弹窗。这是交付与 CI 的唯一标准。但开发/调试选择器阶段，纯靠猜 DOM 结构容易写错选择器再反复跑，允许开真实浏览器观察：
+Tests must pass headlessly. A selector that works only headed or remains flaky headlessly needs more work.
 
-| 场景 | 模式 | 手段 |
-|------|------|------|
-| 写选择器 / 调测试（本地） | 可 **headed** | `playwright test --headed`、`--debug`、`--ui`，或截图（`screenshot`）/ trace / video 产物事后翻 |
-| 交付脚本 / CI 运行 | 必须 **headless** | 框架默认；headed 仅是本地调试手段，不得作为脚本运行前提 |
+### Step 4: Run locally
 
-**约束**：交付的测试脚本必须在 headless 下跑通。headed 只是开发期观察手段，不能依赖"必须看着浏览器才能跑对"。选择器若只在 headed 下稳定、headless 下 flaky，说明选择器/等待仍不够健壮，继续修。
+The same executor starts the dev server using the discovered project command and runs the tests **headlessly**. Finish only after they pass. Fix test code until it passes; if the application itself is buggy, stop and report instead of changing business logic without authorization. Run repeatedly to establish deterministic behavior.
 
-### Step 4: 本地跑通（写测试的同一执行体）
+Unrun tests are unfinished; do not deliver them as verified.
 
-起 dev server（按 Step 1 探测到的项目方式）+ 运行新测试：
+### Step 5: Report
 
-- 以 **headless** 模式跑（交付标准）；确认**绿**才算完成
-- 跑不通则修到通（修测试代码；若发现是**被测功能本身的 bug**，停止并报告用户，不擅自改业务逻辑）
-- 多跑几次确认**确定性**（无间歇性失败）
+Summarize changed test files and added test IDs, actual commands/results/stability, and CI integration guidance: the relevant workflow, server startup, and command. Follow existing CI steps; if CI lacks E2E integration, recommend changes without editing configuration unilaterally.
 
-> 没跑过的测试 = 未完成。禁止交付未验证的测试代码。
+## Outputs
 
-### Step 5: 报告（主会话汇总）
+- Maintained E2E tests following project conventions, stable selectors, and deterministic waits.
+- Actual local verification results.
+- CI integration guidance, not an unsolicited CI change.
 
-- 新增/修改文件清单（测试文件 + 补充的 testid）
-- 运行命令与结果（本地验证用了什么命令、通过率、是否稳定）
-- 接入 CI 的说明：该加到哪个 workflow、起 dev server 的步骤、运行命令（若项目 CI 已有 E2E 段则对齐，没有则给出建议但**不擅自改 CI 配置**）
+## Boundaries
 
-## 产出物
+| Appropriate | Inappropriate |
+|-------------|---------------|
+| Persistent feature regression coverage with an existing or agreed new setup | Disposable agent self-checks, which belong to implementation-time verification |
+| End-to-end frontend user paths | Pure logic/API tests that need no browser |
+| Adapting to the project's framework | Forcing one framework across projects |
 
-- 可进 CI 的 E2E 测试代码（服从项目约定、稳定选择器、确定性等待）
-- 本地跑通的验证记录
-- CI 接入说明（建议，不代为修改 CI）
+Application bugs belong to a separately authorized repair flow. Confirm new framework dependencies or CI changes before applying them.
 
-## 边界
+## Related stages
 
-| 适合 | 不适合 |
-|------|--------|
-| 已有/要建 E2E 体系的 feature 持久回归覆盖 | 一次性的"agent 自证功能对了"（那是 implement 内的临时验证，不进 repo） |
-| 前端用户路径的端到端验证 | 纯逻辑/接口层测试（用单测/集成测试，不起浏览器） |
-| 服从项目既有测试体系 | 想统一强制某一套框架到所有项目（本技能刻意探测适配） |
-
-**不接管被测功能的 bug 修复**：发现功能 bug 报告给用户，由用户决定是否另开修复流程。
-**不擅自装依赖、不擅自改 CI**：涉及新框架依赖或 CI 配置变更，先列给用户确认。
-
-## 与其他技能的关系
-
-- **手动触发**，用于新增/扩展浏览器层持久回归；`/implement` 可按验收要求运行已有必要 E2E 或做临时浏览器检查，不自动为每票创建新 E2E 套件
-- **scout**：Step 1 探测测试体系/CI 配置时可分派做只读文件发现
-- **implementer**：Step 3 写测试可按 execution-mode 分派（遵循其最小变更、验证纪律）
-- 发现的功能 bug 若要修，走 `/diagnosing-bugs` 或回到 `/implement`
+- Manually triggered for maintained browser coverage. `/implement` may run required existing E2E tests or temporary browser checks, without creating a suite for every ticket.
+- Scout may discover test/CI files in Step 1.
+- An implementer may write tests in Step 3 under execution-mode and its minimal-change/validation rules.
+- Repair discovered product bugs through `/diagnosing-bugs` or `/implement` when authorized.

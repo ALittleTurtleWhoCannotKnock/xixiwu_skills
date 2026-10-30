@@ -1,138 +1,118 @@
 ---
 name: diagnosing-bugs
-description: 系统化调试循环。适用于难以复现的 bug、性能回归、或"改这里坏那里"的混乱场景。强调先构建反馈循环，再假设-验证，最后修复+回归测试。
+description: "Debug hard-to-reproduce bugs, performance regressions, and cascading failures through a reproducible feedback loop, falsifiable hypotheses, a minimal fix, and regression coverage."
 ---
 
 # Diagnosing Bugs
 
-## 触发信号
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-- 用户报告"坏了"、"抛错"、"失败"、"变慢"
-- 改了一个地方，另一个地方出问题
--  bug 难以复现或间歇性出现
+## When to use
 
-## 核心 Discipline
+- The user reports broken behavior, errors, failures, or slowdowns.
+- Fixing one area breaks another.
+- A bug is intermittent or difficult to reproduce.
 
-1. **先建反馈循环，再谈修复** — 没有 red-capable 的循环，不进入下一阶段
-2. **假设必须可证伪** — 格式："如果 X 是原因，那么改变 Y 会..."
-3. **一次只改一个变量** — 插桩和修复都遵循单一变量原则
-4. **先写回归测试，再修复** — 确保 bug 不会再出现
+## Core disciplines
 
-## 六阶段流程
+1. **Build the feedback loop first.** Do not advance without a loop that can reproduce failure.
+2. **Make hypotheses falsifiable.** State what changing Y would do if X were the cause.
+3. **Change one variable at a time**, in both instrumentation and fixes.
+4. **Add regression coverage before fixing** so the bug stays fixed.
 
-### Phase 1: 构建反馈循环
+## Six phases
 
-**目标**：一个 tight、red-capable、deterministic 的循环，能复现用户描述的症状。
+### Phase 1: Build the feedback loop
 
-**构建方式**（按优先级）：
-1. 失败测试（在合适的 seam 处）
-2. Curl / HTTP 脚本
-3. CLI 调用 + fixture 输入
-4. Headless 浏览器脚本（Playwright / Puppeteer）
-5. 重放捕获的请求/事件
-6. 最小化 harness（单服务 + mock 依赖）
-7. 属性测试 / fuzz 循环（随机输入找失败模式）
-8. Bisection harness（自动化 git bisect）
-9. 差分循环（旧版本 vs 新版本对比）
-10. HITL 脚本（人工操作，但结构化）
+Build a tight, deterministic loop that can reproduce the user's exact symptom and go red.
 
-**收紧循环**：
-- 更快？（缓存 setup、缩小范围）
-- 信号更准？（断言具体症状，不是"没崩溃"）
-- 更确定？（固定时间、种子、隔离环境）
+Prefer, in order:
+1. A failing test at an appropriate seam.
+2. A curl/HTTP script.
+3. A CLI call with fixture input.
+4. A headless browser script using Playwright/Puppeteer.
+5. Replay of captured requests/events.
+6. A minimal harness: one service and mocked dependencies.
+7. Property tests or fuzzing to expose failure patterns.
+8. An automated git-bisect harness.
+9. A differential loop comparing old and new versions.
+10. A structured human-in-the-loop script.
 
-**完成标准**：
-- [ ] 能复现用户描述的**确切症状**
-- [ ] 确定性：每次运行结果一致
-- [ ] 快速：秒级，不是分钟级
-- [ ] 可自动运行
+Tighten speed by caching setup and reducing scope; assert the specific symptom rather than merely avoiding a crash; fix time/seeds and isolate the environment.
 
-> 如果没有 red-capable 循环，**停止**。不要直接跳到假设阶段。
+Completion criteria:
+- Reproduces the **exact reported symptom**.
+- Produces consistent results.
+- Runs in seconds rather than minutes.
+- Can run automatically.
 
-### Phase 2: 复现 + 最小化
+Without a failure-capable loop, **stop** rather than jumping to hypotheses.
 
-运行循环，观察它变红。
+### Phase 2: Reproduce and minimize
 
-**确认**：
-- [ ] 复现的是**用户描述的 bug**，不是附近的其他 bug
-- [ ] 多次运行可复现（间歇性 bug：提高复现率到可调试程度）
+Run the loop and observe failure. Confirm that it is the reported bug, not a nearby one, and that repeated runs reproduce it. For intermittent bugs, raise the reproduction rate enough to debug.
 
-**最小化**：
-- 逐一切除输入、调用方、配置、数据、步骤
-- 每切一次重新运行循环
-- 保留的元素都是**必要的**：去掉任何一个，循环变绿
+Remove inputs, callers, configuration, data, and steps one at a time, rerunning after every removal. Each remaining element must be necessary: removing it makes the loop green.
 
-### Phase 3: 提出假设
+### Phase 3: Rank hypotheses
 
-生成 **3-5 个 ranked 假设**，再开始验证。
+Generate **3–5 ranked hypotheses** before testing them. Each must predict a falsifiable result: if X causes the bug, changing Y should remove it or changing Z should worsen it.
 
-**每个假设必须可证伪**：
+Example:
 
-> 格式："如果 `<X>` 是原因，那么 `<改变 Y>` 会让 bug 消失 / `<改变 Z>` 会让它更严重。"
-
-**示例**：
 ```
 1. 如果 CSV 转义逻辑没处理引号，那么输入包含 " 的数据会失败
 2. 如果数据库查询超时，那么减少数据量会让它成功
 3. 如果缓存键冲突，那么清除缓存会暂时修复
 ```
 
-**给用户看 ranked 列表**。他们可能有领域知识立即排除某些假设。
+Show the ranked list to the user; their domain knowledge may eliminate candidates immediately.
 
-### Phase 4: 插桩
+### Phase 4: Instrument
 
-每个探针对应 Phase 3 的一个具体预测。**一次只改一个变量**。
+Each probe tests a specific Phase 3 prediction. Change **one variable at a time**.
 
-**工具偏好**：
-1. Debugger / REPL（一个断点胜过十个日志）
-2. 目标边界日志
-3. 不要"log everything and grep"
+Prefer a debugger/REPL, then focused boundary logging. Avoid logging everything and grepping it afterward. Tag debug logs `[DEBUG-xxxx]` for cleanup.
 
-**Tag 所有 debug 日志**：`[DEBUG-xxxx]`，方便最后统一清理。
+For performance bugs, measure a baseline before bisecting or fixing.
 
-**性能 bug**：先建立 baseline 测量，再 bisect。先测量，再修复。
+### Phase 5: Fix with regression coverage
 
-### Phase 5: 修复 + 回归测试
+At an appropriate seam, add regression coverage **before the fix**. Reuse an existing failing case or extend the matching test file and fixtures with the minimized reproduction. Parameterize related inputs instead of creating a file per hypothesis. Put exploratory harnesses, replays, and probes in system temporary storage; retain useful regression coverage in the maintained suite.
 
-**先写回归测试，再修复**（如果有正确的 seam）。
+The seam must reproduce the **actual failure pattern**:
+1. Add the minimized reproduction to existing tests, or reuse an accurate existing case.
+2. Observe failure.
+3. Apply the fix.
+4. Observe success.
+5. Rerun the original, unminimized Phase 1 loop.
 
-优先复用现有失败用例，或将最小复现补入对应测试文件与 fixtures；同类输入用参数化/子测试，不为每个假设新建测试文件。探索用 harness、重放或诊断脚本放系统临时目录；有长期价值的回归覆盖保留在项目测试体系中。
+If no suitable seam exists, record that architectural limitation as a finding.
 
-**正确的 seam**：测试能复现**真实的 bug 模式**。
+### Phase 6: Clean up
 
-**步骤**：
-1. 将最小化复现纳入已有测试，已有用例准确复现时直接复用
-2. 观察它失败
-3. 应用修复
-4. 观察它通过
-5. 重新运行 Phase 1 的原始循环（未最小化）
+Before finishing, verify:
+- The original symptom no longer occurs in the Phase 1 loop.
+- Regression tests pass.
+- All `[DEBUG-...]` logs are removed.
+- Temporary prototypes are removed or identified.
+- The verified hypothesis is documented for the commit/PR message.
 
-> 如果没有正确的 seam，**这本身就是发现**。代码架构阻止了 bug 被锁定。记录并标记。
+## Outputs
 
-### Phase 6: 清理
+- A reproducible loop retained as regression coverage.
+- The fix.
+- The verified cause documented for the commit message.
 
-完成前检查：
-- [ ] 原始复现场景不再出现（重跑 Phase 1 循环）
-- [ ] 回归测试通过
-- [ ] 所有 `[DEBUG-...]` 日志已删除
-- [ ] 临时原型已删除或标记
-- [ ] 正确的假设已写入 commit / PR 消息
+## Boundaries
 
-## 产出物
+| Appropriate | Inappropriate |
+|-------------|---------------|
+| Reproducible bugs | Production incidents with no usable reproduction |
+| Existing test infrastructure | Untested legacy code before establishing tests |
+| Performance regressions with profiling evidence | A misunderstanding of requirements |
 
-- 可复现的反馈循环（作为回归测试保留）
-- 修复代码
-- 文档化的正确假设（commit message）
+## Related stages
 
-## 何时使用
-
-| 适合 | 不适合 |
-|------|--------|
-| 能复现的 bug | 完全无法复现的生产偶发问题 |
-| 有测试基础设施 | 完全没有测试的遗留系统（先补测试） |
-| 性能回归（有 profiling 数据） | 纯粹的需求误解 |
-
-## 与其他技能的关系
-
-- 预防未来 bug，在 `/implement` 阶段确保 TDD 覆盖
-- bug 修复若涉及对外端点变更，同步更新对应 `/to-api-contract` 契约片段
+- Prevent recurrence through `/implement` and its TDD coverage.
+- If an external endpoint changes, update the affected `/to-api-contract` fragment.

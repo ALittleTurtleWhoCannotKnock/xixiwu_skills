@@ -4,6 +4,7 @@
 
 - 每个 `.prompt.md` 是一个执行型 agent 的完整指令
 - `workflow-contract.md` 定义共享票据字段和状态语义；主会话传给 implementer，Pi/Claude Code 生成文件时自动附带，不是独立 agent
+- `language-policy.md` 定义项目交互/产物语言；所有生成的 agent 自动附带，手动分派时传递该约定与两项语言。配置从目标仓库读取，不写死在全局 agent 中
 - `diagram-guide.md` 是功能流程图、架构图、时序图与泳道图规范，供 init、spec 等生成图示时参照，不是独立 agent
 - `adapters/<tool>/` 下的文件用对应工具的 frontmatter 包装同一份 prompt
 - 改 prompt 只改这里；thinking、工具白名单等适配配置放在 adapters，基础模型由使用者接入时选择并记录在项目 execution-mode.md，适配器或单次分派读取使用

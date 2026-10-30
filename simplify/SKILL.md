@@ -1,78 +1,72 @@
 ---
 name: simplify
-description: 代码清理。主会话确定 scope 与触发时机（读 commit-strategy），实际清理分派给 simplifier 子 agent（审查复用/质量/效率并修复）。修复后留人工 checkpoint 再提交。
+description: "Review and clean up an explicitly scoped diff for reuse, quality, and efficiency before committing. The main session sets scope and checkpoint; a simplifier fixes clear issues without committing."
 ---
 
 # Simplify
 
-提交前审查改动代码的**复用、质量、效率**。**主会话确定 scope 与时机，清理执行分派给 `simplifier` 子 agent。**
+Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
-## 触发时机（主会话）
+Review in-scope changes for **reuse, quality, and efficiency** before committing. The main session sets scope/timing; a simplifier performs cleanup.
 
-**不由用户手动记，由 commit-strategy 驱动。** 读取 `docs/agents/commit-strategy.md`：
+## Timing and scope
 
-| 策略 | 触发点 | scope |
-|------|--------|-------|
-| per-ticket | 每张 ticket 提交前 | 当前未提交的 diff（该 ticket 改动） |
-| squash | 整个 feature 完成、统一提交前 | 累计 diff（feature 起点到工作区） |
+Read `docs/agents/commit-strategy.md` rather than relying on the user to trigger this manually:
 
-**"feature 起点"的定义：** feature 分支与主干（main/master）的分叉点，即 `git merge-base main HEAD`。这样 scope 只含本 feature 的改动，不含期间 main 上他人的提交。若 feature 分支期间 main 有大量更新，建议先 rebase 到 main 再跑 simplify，避免 diff 混入无关变更。
+| Strategy | Trigger | Scope |
+|----------|---------|-------|
+| per-ticket | Before each ticket commit | This ticket's uncommitted diff |
+| squash | Before the feature's combined commit | Changes from the feature base to the working tree |
 
-也可手动触发（如 `/simplify` 或"清理一下这段代码"），此时 scope 由用户指定或 `git diff` 推断。
+The feature base is the feature/main (or master) merge base, e.g. `git merge-base main HEAD`. Include this feature's changes rather than unrelated main updates. If main changed substantially, consider rebasing before the review to keep its scope clear.
 
-## 核心 Discipline
+The user may also request cleanup directly; use their scope or infer it from `git diff`.
 
-1. **编排与执行分离** — 主会话定 scope、做人工 checkpoint；子 agent 只做审查与修复
-2. **保持外科手术式** — 子 agent 只改 diff 范围内的代码，不顺手重构世界
-3. **子 agent 不提交** — 修复后返回报告，提交由主会话在用户确认后执行
+## Core disciplines
 
-## 操作步骤
+1. The main session orchestrates scope and the human checkpoint; the child reviews/fixes.
+2. Make surgical changes inside the diff, not surrounding refactors.
+3. The child never commits. The main session handles the authorized commit after presenting results.
 
-### Step 1: 确定 scope（主会话）
+## Workflow
 
-按触发时机（见上表）确定 diff 范围。scope 模糊时先问用户再动手。
+### Step 1: Set scope
 
-### Step 2: 执行清理（默认分派 simplifier 子 agent）
+Use the commit strategy and trigger above. Ask if the scope remains ambiguous.
 
-**先读执行模式：** 读取 `docs/agents/execution-mode.md`。缺失或内容无法识别（非 `subagent`/`inline`，如被改坏）时默认 `subagent` 并提示用户检查配置。用户可在单次执行时覆盖默认。
+### Step 2: Run cleanup
 
-分派时按[共享执行约定的基础模型规则](../_agents/workflow-contract.md#基础模型)读取并应用用户选择；inline 模式沿用主会话。
+Read `docs/agents/execution-mode.md`. If missing/invalid rather than `subagent` or `inline`, default to subagent and advise checking configuration. A task-specific override takes precedence.
 
-**默认 / `subagent` 模式 → 分派给 `simplifier` 子 agent**，传入 diff scope。子 agent 会：
-- 读改动代码
-- 按"复用/质量/效率"三维度审查（详见下方"审查维度"）
-- 直接修复无争议问题；有争议的（权衡可读性、改行为）返回主会话询问
-- 重跑触及文件的类型检查/测试
-- 返回报告（发现 N 个问题、修了 M 个、刻意跳过哪些及原因）
-- **子 agent 不提交**
+Apply the user-selected model through the [shared model rules](../_agents/workflow-contract.md#基础模型); inline execution keeps the main-session model.
 
-**`inline` 模式 / 用户单次覆盖 → 主会话直接执行**：参照 `_agents/simplifier.prompt.md` 中的三维度审查与"不报告什么"清单，在 diff 范围内清理。
+In subagent mode, dispatch a simplifier with the diff scope. It reads the changes, reviews reuse/quality/efficiency, fixes clear issues, reports debatable tradeoffs instead of applying them, reruns relevant checks, and reports findings/fixes/deliberate exclusions. **It does not commit.**
 
-> 执行逻辑（审查维度、"不报告什么"）的单一事实源是 `_agents/simplifier.prompt.md`；两种模式只是执行主体不同。
+In inline mode or an explicit override, the main session follows `_agents/simplifier.prompt.md`, including its review dimensions and exclusions.
 
-### Step 3: 人工 checkpoint（主会话）
+The role prompt is the sole execution source for both modes; only the executor changes.
 
-向用户展示子 agent 的修复清单，**暂停等用户确认**。用户确认后才进入提交（由调用方 `/implement` 或用户执行）。
+### Step 3: Human checkpoint
 
-## 审查维度
+Show the cleanup report and **wait for user confirmation** before the caller (`/implement` or the user) commits.
 
-执行逻辑（复用/质量/效率三维度 + "不报告什么"清单）的单一事实源是 `_agents/simplifier.prompt.md`。主会话只需确认子 agent 报告覆盖了这三类，并核对其"刻意跳过"项是否合理。
+## Review dimensions
 
-## 产出物
+Reuse, quality, efficiency, and exclusions are defined once in `_agents/simplifier.prompt.md`. Check that the report covers them and explains deliberate exclusions.
 
-- 修复后的代码（diff 范围内）
-- 修复清单摘要（发现 N 个问题、修了 M 个、刻意跳过哪些及原因）
+## Outputs
 
-## 边界
+- In-scope fixes.
+- Findings/fixes and deliberate exclusions with reasons.
 
-| 适合 | 不适合 |
-|------|--------|
-| 提交前的代码清理 | 大范围架构重构（那需要专门的 spec/ticket） |
-| diff 范围内的复用/质量/效率 | diff 范围外的代码（不越界） |
-| per-ticket / squash 两种提交节奏 | 无 diff 可审（先确认有改动） |
+## Boundaries
 
-## 与其他技能的关系
+| Appropriate | Inappropriate |
+|-------------|---------------|
+| Pre-commit cleanup | Large refactors needing their own Spec/tickets |
+| Reuse/quality/efficiency within the diff | Out-of-scope changes |
+| per-ticket or squash scopes | No changes to review |
 
-- 由 `/implement` 在提交节点触发（时机读 `docs/agents/commit-strategy.md`）
-- 修复后留人工 checkpoint，用户确认后 `/implement` 才执行提交
-- 只管"写得好不好"；管"做对没有"的是 `/implement` 的 Standards/Spec review
+## Related stages
+
+`/implement` invokes this at the configured commit point. The human checkpoint remains before committing. This skill reviews code quality; `/implement` also checks fidelity to the Spec and standards.

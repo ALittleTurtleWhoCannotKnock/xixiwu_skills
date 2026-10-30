@@ -37,6 +37,11 @@ if [ "$target" = "codex" ]; then
   exit 0
 fi
 
+if [ ! -f "$SRC/language-policy.md" ]; then
+  echo "缺少语言约定源文件: $SRC/language-policy.md，请使用完整技能库" >&2
+  exit 1
+fi
+
 # Only use a model explicitly selected by the user; there is no built-in model.
 MODEL="${DEV_FLOW_MODEL:-}"
 EXEC_MODE_FILE="$project_root/docs/agents/execution-mode.md"
@@ -89,6 +94,8 @@ _gen () { # name, dest, frontmatter
   {
     printf '%s\n\n' "$fm"
     cat "$SRC/$name.prompt.md"
+    printf '\n\n'
+    cat "$SRC/language-policy.md"
     if [ "$name" = "implementer" ]; then
       printf '\n\n'
       cat "$SRC/workflow-contract.md"

@@ -81,6 +81,7 @@ class BuildTests(unittest.TestCase):
                         generated = (self.output / tool / f"{name}.md").read_text()
                         body = generated.partition("\n---\n\n")[2]
                         expected = (self.bundle / "_agents" / f"{name}.prompt.md").read_text()
+                        expected += "\n\n" + (self.bundle / "_agents/language-policy.md").read_text()
                         if name == "implementer":
                             expected += "\n\n" + (self.bundle / "_agents/workflow-contract.md").read_text()
                         self.assertEqual(body, expected)
@@ -147,6 +148,29 @@ class BuildTests(unittest.TestCase):
         second = {p.relative_to(self.output): p.read_bytes() for p in self.output.glob("*/*.md")}
         self.assertEqual(first, second)
         self.assert_pi_model("provider/project-model")
+
+    def test_project_language_is_not_baked_into_global_agent_prompts(self):
+        language = self.project / "docs/agents/language.md"
+        language.parent.mkdir(parents=True)
+        outputs = []
+        for interaction, artifact in (("zh-CN", "en"), ("en", "zh-CN")):
+            with self.subTest(interaction=interaction, artifact=artifact):
+                language.write_text(f"# Workflow language\ninteraction_language: {interaction}\n"
+                                    f"artifact_language: {artifact}\n")
+                before = language.read_bytes()
+                result = self.run_build("all", "--project-root", str(self.project))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(language.read_bytes(), before)
+                outputs.append({p.relative_to(self.output): p.read_bytes()
+                                for p in self.output.glob("*/*.md")})
+        self.assertEqual(outputs[0], outputs[1])
+
+    def test_missing_language_policy_does_not_write_outputs(self):
+        (self.bundle / "_agents/language-policy.md").unlink()
+        result = self.run_build("all")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.output.exists())
+        self.assertFalse((self.root / "fallback").exists())
 
 
 class InstallTests(unittest.TestCase):
@@ -218,8 +242,10 @@ class InstallTests(unittest.TestCase):
         (self.bundle / "_agents/scout.prompt.md").write_bytes(updated)
         result = self.install("all")
         self.assertEqual(result.returncode, 0, result.stderr)
+        language = (self.bundle / "_agents/language-policy.md").read_bytes()
         for location in (".pi/agent/agents", ".claude/agents"):
-            self.assertTrue((self.home / location / "scout.md").read_bytes().endswith(b"\n" + updated))
+            expected = b"\n" + updated + b"\n\n" + language
+            self.assertTrue((self.home / location / "scout.md").read_bytes().endswith(expected))
         backups = list((self.home / ".local").rglob("scout.md"))
         self.assertEqual(len(backups), 2)
         result = self.install("all")
@@ -241,7 +267,8 @@ class InstallTests(unittest.TestCase):
         (self.home / ".claude/agents/scout.md").symlink_to(managed)
         result = self.install("all", model="different/installation-model")
         self.assertEqual(result.returncode, 0, result.stderr)
-        body = (self.bundle / "_agents/scout.prompt.md").read_bytes()
+        body = ((self.bundle / "_agents/scout.prompt.md").read_bytes() + b"\n\n"
+                + (self.bundle / "_agents/language-policy.md").read_bytes())
         for location in (".pi/agent/agents", ".claude/agents"):
             path = self.home / location / "scout.md"
             self.assertEqual(path.read_bytes(), header.encode() + b"\n" + body)

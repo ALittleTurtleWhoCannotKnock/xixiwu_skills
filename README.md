@@ -150,7 +150,7 @@ adapters/               # 工具适配（thinking / 工具白名单）
 **设计原则：**
 - **决策前置**：spec/ticket/plan 阶段已拍死所有决策（spec=产品、plan=技术、ticket=执行细节），执行型 agent 遇到未覆盖的决策就停止并报告，绝不猜测或扩大范围。因此它们不依赖"中途回问主 agent"的通道，能跨 Pi / Claude Code / Codex 统一
 - **边界清晰**：子 agent 都不 commit、不跑 simplify（那是主 agent 在提交节点、经人工 checkpoint 后做的）
-- **状态闭环**：字段与状态语义统一见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md)。每票领取为 `claimed`，必要自动检查通过后记 `code-complete` 并解除 ticket 依赖；最终验收和 checkpoint 完成后才 `resolved`，提交节奏独立处理
+- **票级自动完成**：每票领取为 `claimed`，实现、必要工程验证和审查通过后自动 `resolved`；远程同步 close，本地写状态即关闭，不等待人工功能验收或提交确认。人工验收集中到 Plan（无 Plan 时 Spec），`/find` 分别显示工程完成与功能验收，旧 `code-complete` 只作兼容。详见[共享状态约定](./_agents/workflow-contract.md#状态与依赖)
 - **小改动入口**：单票小改动可明确省略 spec/plan，必要决策、测试边界与验收写在 ticket 中；下游按该约定执行
 - **测试组织**：优先复用测试文件和 fixtures，同类输入参数化；业务/bug 使用行为测试，纯重构做前后回归，文档/配置/样式采用适用检查。必要验证仍须通过，不按 ticket 批量生成 test 文件。规则见[共享验证约定](./_agents/workflow-contract.md#验证方式与测试组织)
 - **进度查询**：`/find` 只读聚合状态，不修改任何状态；scout 只负责复杂目录发现，状态判断由主会话完成
@@ -178,6 +178,18 @@ Pi 构建时的优先级为 `DEV_FLOW_MODEL` 临时覆盖 > 目标项目的“�
 
 无论选哪个，**单次执行时都可临时覆盖**（如"这张小 ticket 别派了"）。执行逻辑的单一事实源是 `_agents/*.prompt.md`，两种模式只是执行主体不同。
 
+**交互语言和业务产物语言也由初始化确认：** `/init-dev-flow` 分别确认两项，保存到目标项目的 `docs/agents/language.md`，例如中文交流、英文编写 Spec/Plan/Tickets。示例不代表模板默认：
+
+```markdown
+# Workflow language
+interaction_language: zh-CN
+artifact_language: en
+```
+
+单次明确指定语言时，只覆盖该次任务的对应项，不改项目默认。旧项目重跑初始化可只补语言，保留 tracker、提交策略、执行模式和基础模型；未确认时不保存推测值。普通任务遇到缺失配置可暂沿会话/既有产物语言，不因缺语言文件而中断，也不代用户初始化。
+
+各技能及生成的执行代理遵循[轻量语言约定](./_agents/language-policy.md)：内部指令语言与用户输出语言分开，产物标题、说明和图标签按配置，协议字段、状态值、引用、代码/API 标识与原始会话保持原样；语言默认变更不批量重译历史文档。分派时传递两项设置和目标项目，不把某项目偏好写死在全局 agent 中。
+
 ## 打包给其他团队/仓库使用
 
 分发完整仓库或压缩包，接收方放在长期保留的独立目录，再使用相同安装入口：
@@ -187,7 +199,7 @@ cd /path/to/xixiwu_skills
 ./install.sh all
 ```
 
-使用者在自己的项目运行 `/init-dev-flow` 完成 tracker、提交策略、执行模式及基础模型选择；分发模板时无需预填模型名或供应商配置。ZIP 用户更新时，将完整新版仓库放到相同位置后重跑 `install.sh`。
+使用者在自己的项目运行 `/init-dev-flow` 完成 tracker、提交策略、执行模式、基础模型及语言选择；分发模板时无需预填模型或语言偏好。ZIP 用户更新时，将完整新版仓库放到相同位置后重跑 `install.sh`。
 
 ## 图示（功能流程图 / 架构图 / 时序图 / 泳道图）
 
@@ -209,7 +221,7 @@ cd /path/to/xixiwu_skills
 ## 使用方式
 
 1. 运行 `./install.sh <pi|claude-code|codex|all>` 安装技能与适配文件
-2. **新仓库先运行 `/init-dev-flow`**，确定 tracker 类型、提交策略、执行模式
+2. **新仓库先运行 `/init-dev-flow`**，确定 tracker、提交策略、执行模式/基础模型，并确认交互与产物语言
 3. 主流程按阶段顺序使用 `/命令` 触发；执行型阶段按 execution-mode 派子 agent 或主会话执行
 4. 遇到难调 bug 时使用 `/diagnosing-bugs`
 5. 后端 ticket 完成且涉及对外端点时，用 `/to-api-contract` 产出契约给前端
@@ -225,6 +237,7 @@ dev-flow-skills/
 ├── _agents/                  # 执行型子 agent 的 prompt 源
 │   ├── README.md
 │   ├── workflow-contract.md  # 共享字段、状态和简化流程
+│   ├── language-policy.md    # 项目交互与产物语言约定，所有角色共用
 │   ├── diagram-guide.md      # 图示规范（非 agent）
 │   ├── exporter.prompt.md
 │   ├── simplifier.prompt.md
@@ -271,4 +284,4 @@ bash -n install.sh adapters/build.sh
 python3 -B -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-自动测试使用临时目录与临时 HOME 验证生成与安装：目标参数、模型优先级、首次安装、重复更新、旧副本迁移、备份、配置保留、预览及源仓库保护，不写真实用户级目录。技能决策的行为走查见 [`tests/workflow-scenarios.md`](./tests/workflow-scenarios.md)，不以关键词检查代替实际执行。
+自动测试使用临时目录与临时 HOME 验证生成与安装：目标参数、模型优先级、语言约定附带但不绑定项目选择、首次安装、重复更新、旧副本迁移、备份、配置保留、预览及源仓库保护，不写真实用户级目录。技能决策的行为走查见 [`tests/workflow-scenarios.md`](./tests/workflow-scenarios.md)，不以关键词检查代替实际执行。
