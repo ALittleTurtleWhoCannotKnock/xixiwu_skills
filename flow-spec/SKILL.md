@@ -24,6 +24,12 @@ Follow the target project's interaction and artifact languages from [language po
 
 ## Workflow
 
+### Step 0: Choose the optional HTML review
+
+Before gathering code context or drafting, ask in the interaction language whether this invocation should also produce an HTML Spec review: “本次是否额外生成 HTML 规格阅读版？需要 / 不需要”. Reuse an explicit choice in the current request or this invocation's conversation; do not ask twice. Otherwise wait for the answer, without saving a guessed choice or generating HTML.
+
+The choice applies only to this invocation, not a project/global default. Declining keeps the normal Spec workflow without reading the HTML generation guide or template. Accepting adds a derived reading view; the declared Markdown file or remote Spec issue remains authoritative. No separate requirements-clarification page is produced.
+
 ### Step 1: Gather code context
 
 Read `docs/agents/execution-mode.md`; missing means subagent by default. Respect a task override.
@@ -147,10 +153,16 @@ When `/flow-plan` later creates the plan, backlink `Plan:` from the current Spec
 
 The Spec defines product acceptance criteria. If tickets proceed without a Plan, add a functional-acceptance subsection within the approach and `Acceptance: pending`; this Spec owns acceptance. With a Plan, link its acceptance entry instead. Maintain one acceptance state, without adding a fifth top-level Spec section.
 
+### Step 4.5: Generate HTML only when requested
+
+Only for an affirmative Step 0 choice, follow [HTML review guidance](references/html-review.md) and use its reading-layout template. Derive the page from the saved authoritative Spec, preserve the source language, content, relationships, and version, and validate the page before presenting it. HTML generation grants no Git submission or publishing permission.
+
+When declined, skip generation and HTML navigation entries. Preserve any existing files; if the source changed, identify an old view as stale rather than presenting it as current. A missing public hosting destination does not block the normal Spec workflow or justify a fake reading link.
+
 ### Step 5: Confirm
 
-Present the Spec summary; proceed after user confirmation.
+Present the Spec summary and source reference, plus the validated HTML path/real published URL when requested. Report any incomplete generation or unverified preview accurately. Opening a page is not approval; proceed after user confirmation.
 
 ## Outputs and next stage
 
-Produce a structured Spec with business flow, test seams, sequence flow, and explicit module boundaries/impact. After confirmation, use `/flow-plan` for the technical choices, implementation path, risks, and approval, then `/flow-todo` for execution details.
+Produce a structured Spec with business flow, test seams, sequence flow, and explicit module boundaries/impact, plus an HTML reading view only when requested. After confirmation, use `/flow-plan` for the technical choices, implementation path, risks, and approval, then `/flow-todo` for execution details.

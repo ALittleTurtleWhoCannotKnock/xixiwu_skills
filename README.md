@@ -101,6 +101,8 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 
 **Tracker 产物：** 本地分别保存 Spec、`plan.md` 和 ticket 文件；GitHub/GitLab 分别使用 Spec issue、独立 Plan issue 和 ticket issues。Plan 正文保存现行技术方案，关联 Spec 与 tickets，评论记录讨论和批准依据；/flow-amend 更新同一 Plan issue，不新建 plan-vN。字段与关联规则见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md#tracker-产物与-plan-引用)。
 
+**可选 HTML 规格阅读版：** `/flow-spec` 开始时确认本次是否需要额外生成 HTML；请求中已明确选择时直接沿用，否则等待回答。选择只对本次有效：需要时按统一的阅读布局生成，不需要时保持原有规格流程。正文仍保存在 Markdown 或 Spec issue，HTML 是带来源、版本和生成时间的阅读快照，不单独生成需求澄清页。GitHub 正文保留可读内容，只有已有授权发布渠道且验证可访问时才添加在线阅读链接；没有托管时交付本地文件，不自动提交或部署。详见[HTML 阅读版约定](./flow-spec/references/html-review.md)。
+
 ## 层级与进度入口
 
 默认归属为 **Spec → Plan → Tickets**；已有 Epic 时在 Spec 上方关联它。`Parent:` 说明直接归属，`Spec:` 定位规格版本，`Plan:` 定位 P<N>，`Blocked by:` 单独说明执行依赖。版本续接的旧 ticket 保留为历史，不作为新 ticket 的归属父级。

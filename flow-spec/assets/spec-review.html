@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="spec-source" content="{{SOURCE_URL}}">
+  <meta name="spec-version" content="{{VERSION_LABEL}}">
+  <meta name="spec-generated-at" content="{{GENERATED_AT}}">
+  <title>{{TITLE}}</title>
+  <style>
+    :root{color-scheme:light dark;--paper:light-dark(#fff,#1b2420);--backdrop:light-dark(#f4f6f5,#131917);--ink:light-dark(#22342c,#e8f0eb);--muted:light-dark(#617269,#a4b6aa);--line:light-dark(#dfe7e1,#35483c);--soft:light-dark(#f1f5f3,#24322b);--accent:light-dark(#236a50,#9ad3b0)}
+    *{box-sizing:border-box}
+    body{margin:0;padding:24px;background:var(--backdrop);color:var(--ink);font:14px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;overflow-wrap:anywhere}
+    a{color:var(--accent)}
+    .spec-page{max-width:1120px;margin:auto;background:var(--paper);border:1px solid var(--line);border-radius:14px}
+    .spec-top{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:18px 30px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+    .spec-brand{font-size:13px;letter-spacing:.08em;font-weight:600;color:var(--ink)}
+    .spec-hero{padding:28px 36px 24px}
+    .spec-version{color:var(--accent);font-size:12px;margin:0 0 8px}
+    h1{font:600 31px/1.4 "Songti SC","STSong",Georgia,serif;letter-spacing:-.02em;margin:0 0 13px}
+    .spec-source{font-size:12px;color:var(--muted);margin:0}
+    .spec-metadata{font-size:12px;color:var(--muted);margin-top:12px}
+    .spec-metadata:empty{display:none}
+    .spec-layout{display:grid;grid-template-columns:145px minmax(0,1fr);gap:32px;padding:26px 36px 32px;border-top:1px solid var(--line)}
+    .spec-nav-label{color:var(--muted);font-size:11px;letter-spacing:.1em;margin:0 0 12px}
+    .spec-nav a{display:block;padding:8px 0;min-height:42px;color:var(--muted);text-decoration:none;font-size:12px}
+    .spec-nav a:hover,.spec-nav a[aria-current=location]{color:var(--accent)}
+    .spec-content{min-width:0;max-width:800px}
+    .spec-section{min-width:0;scroll-margin-top:18px}
+    .spec-section+.spec-section{padding-top:25px;border-top:1px solid var(--line);margin-top:25px}
+    h2{font-size:17px;line-height:1.6;margin:0 0 13px;font-weight:600}
+    h3{font-size:14px;line-height:1.6;margin:20px 0 10px;font-weight:600}
+    h4{font-size:13px;margin:16px 0 8px;font-weight:600}
+    p{margin:0 0 12px}
+    p:last-child{margin-bottom:0}
+    ul,ol{padding-left:22px;margin:8px 0 14px}
+    li+li{margin-top:6px}
+    table{border-collapse:collapse;width:100%;font-size:13px;margin:14px 0;table-layout:fixed}
+    th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:10px 9px;overflow-wrap:anywhere}
+    th{font-weight:500;background:var(--soft)}
+    code{font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--soft);padding:2px 4px;border-radius:3px}
+    pre{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--soft);border-radius:8px;padding:14px;font-size:12px}
+    pre code{padding:0;background:transparent;border-radius:0}
+    blockquote{border-left:3px solid var(--line);padding-left:14px;margin:14px 0;color:var(--muted)}
+    details{margin:12px 0}
+    summary{min-height:42px;padding:8px 0;color:var(--muted)}
+    details>div{padding-top:8px}
+    svg,img{max-width:100%;height:auto}
+    figure{margin:16px 0}
+    figcaption{font-size:12px;color:var(--muted);margin-top:8px}
+    .spec-footer{display:flex;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin:0 36px;padding:15px 0 18px;border-top:1px solid var(--line)}
+    @media(max-width:720px){body{padding:14px}.spec-hero{padding:24px}.spec-layout{grid-template-columns:110px minmax(0,1fr);gap:22px;padding:24px}.spec-footer{margin:0 24px}}
+    @media(max-width:520px){body{padding:8px}.spec-top{padding:16px 18px}.spec-hero{padding:22px 18px}h1{font-size:26px}.spec-layout{display:block;padding:18px}.spec-nav{margin-bottom:22px}.spec-nav-label{display:none}.spec-nav-links{display:flex;gap:0 18px;flex-wrap:wrap}.spec-nav a{min-height:44px}.spec-footer{margin:0 18px}th,td{padding:8px 5px}}
+  </style>
+</head>
+<body>
+  <main class="spec-page" id="spec-review">
+    <header class="spec-top"><span class="spec-brand">FLOW</span><span>{{SPEC_LABEL}}</span></header>
+    <div class="spec-hero">
+      <p class="spec-version">{{VERSION_LABEL}}</p>
+      <h1>{{TITLE}}</h1>
+      <p class="spec-source">{{SOURCE_LABEL}} <a href="{{SOURCE_URL}}">{{SOURCE_URL}}</a></p>
+      <div class="spec-metadata">{{SOURCE_METADATA_HTML}}</div>
+    </div>
+    <div class="spec-layout">
+      <nav class="spec-nav" aria-label="{{TOC_LABEL}}"><p class="spec-nav-label">{{TOC_LABEL}}</p><div class="spec-nav-links">{{TOC_HTML}}</div></nav>
+      <article class="spec-content">{{BODY_HTML}}</article>
+    </div>
+    <footer class="spec-footer"><span>{{GENERATED_LABEL}}</span><time>{{GENERATED_AT}}</time></footer>
+  </main>
+  <script>
+    (() => {
+      const root = document.getElementById('spec-review');
+      const links = Array.from(root.querySelectorAll('.spec-nav a[href^="#"]'));
+      links.forEach(link => link.addEventListener('click', event => {
+        const target = document.getElementById(link.getAttribute('href').slice(1));
+        if (!target) return;
+        event.preventDefault();
+        links.forEach(item => item.removeAttribute('aria-current'));
+        link.setAttribute('aria-current', 'location');
+        target.scrollIntoView({block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+      }));
+    })();
+  </script>
+</body>
+</html>

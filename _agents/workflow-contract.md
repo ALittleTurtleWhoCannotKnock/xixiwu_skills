@@ -30,6 +30,8 @@ Read the tracker declaration. Each artifact has one current authoritative store:
 - `/flow-amend` updates this same Plan body/Spec reference, not plan-vN. Retain the tracker's Spec-version convention; issue numbers do not determine versions.
 - When continuing an old comment-only plan, migrate its current content into an independent issue, retain history/evidence, and update touched references. Read-only queries only recommend migration.
 
+Optional Spec HTML is a derived reading snapshot; `/flow-spec` asks per invocation and generates it only when requested. The Markdown file or remote issue remains authoritative, including approval/acceptance. Link only actual files or verified, authorized deployed pages, and keep source/version provenance. If a touched Spec changes, refresh HTML only when the request includes it, or mark/remove its current-reading link as stale while preserving the historical file. Existing HTML alone is not consent for new generation or publication.
+
 <a name="归属层级与列表展示"></a>
 ## Ownership and navigation
 
