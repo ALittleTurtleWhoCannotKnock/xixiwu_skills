@@ -6,7 +6,7 @@
 
 准备空仓库的首次初始化、已有 tracker/提交策略/已选基础模型但缺语言的旧仓库，以及语言尚未确认的初始化请求。核对两项语言独立保存，明确选择可直接沿用，未确认时不保存推测值、不虚报完成；旧项目只补语言及根声明指针，模型和其他配置保持原样。重复初始化不重复询问已确认项目。
 
-在“中文交互、英文产物”的目标项目执行 `/to-plan`，检查方案可读内容为英文、对用户的 review 摘要为中文，固定字段/状态值和引用格式不变。再临时要求该次 Plan 使用中文，核对配置仍为英文产物默认。对缺语言配置的旧项目执行只读 `/find`，核对不代建配置或改文件。
+在“中文交互、英文产物”的目标项目执行 `/flow-plan`，检查方案可读内容为英文、对用户的 review 摘要为中文，固定字段/状态值和引用格式不变。再临时要求该次 Plan 使用中文，核对配置仍为英文产物默认。对缺语言配置的旧项目执行只读 `/flow-status`，核对不代建配置或改文件。
 
 用隔离生成的 agent 定义执行契约提取等任务，核对读取的是目标项目语言，而不是技能库或生成目录的语言。对原始会话导出，产物默认变化仍不得翻译/改写原文；报告实际执行与未执行的场景，不以存在某段提示词代替行为验证。
 
@@ -14,17 +14,17 @@
 
 准备 Python 标准库项目，一个可复现的公开函数错误，以及已确认的 ticket。配置本地 tracker、默认四态、squash、inline。ticket 写 `Spec: none (局部修复)`、`Plan: none (单票小改动)`、`Blocked by: none`，包含产品边界、技术决策、公开函数测试 seam 和工程完成标准。
 
-用户请求：使用 `/implement` 修复该票，暂不提交。
+用户请求：使用 `/flow-do` 修复该票，暂不提交。
 
 核对：实际复现失败并修复，必要工程检查和 review 通过；不索要已明确省略的文档，也不运行 plan 锚点检查。验证后自动记录 resolved，不等待用户验收或 Git 确认；无父文档时不补造 Plan/Spec，未完成的人工跟进如实交接，不伪报整项功能已经验收。
 
-## amend 后继续执行、squash 串行依赖与目标态锚点
+## /flow-amend 后继续执行、squash 串行依赖与目标态锚点
 
 准备已有 `spec.md`、已完成旧票和 `plan.md` 的项目。提供 `spec-v2.md`、指向它的 INDEX，以及已获用户批准的更新 plan。新增两张票，分别写 `Spec: spec-v2.md`，独立的 `Plan:` 引用，第二张依赖第一张。
 
 第一张通过现有公开函数挂接一个新方法；plan 同时写存在的挂接点和“由本票生成”的新方法目标态。第二张使用新方法完成另一行为。使用 squash、inline 和默认四态，Plan 的 Acceptance 初始 pending。
 
-用户请求：使用 `/implement` 完成 v2 的执行票，暂不提交。
+用户请求：使用 `/flow-do` 完成 v2 的执行票，暂不提交。
 
 核对：读取 v2 与更新后的 plan；第一张开工时不要求新方法已经存在，完成后核实目标态与测试。第一张自动 resolved 后第二张可以开工，不等待 Git 提交；最终检查覆盖两票。旧票不被重开，Spec/Plan 引用不混写，人工功能验收留在 Plan pending，提交确认仍保持独立。
 
@@ -32,7 +32,7 @@
 
 准备多版本 feature：INDEX 指向 v2，旧 v1 有 resolved 和遗留 ready 票；v2 有 code-complete 上游票、依赖它的 ready 票、使用旧 `**阻塞**:` 字段依赖 parked 票的另一张 ready 票。
 
-用户请求：使用 `/find` 查看当前进度与下一步。
+用户请求：使用 `/flow-status` 查看当前进度与下一步。
 
 核对：下一步只从 v2 的执行票选择；旧 code-complete 仅按原 tracker 的明确依赖语义及工程证据处理，缺少定义不默认解除；旧 `**阻塞**:` 依赖被识别，parked 不解除下游。不在只读查询时批量迁移旧票；未知字段或缺失证据不被默认为完成。
 
@@ -44,7 +44,7 @@
 
 ## 票级自动关闭与上层功能验收
 
-本地和模拟远程分别准备已批准 Plan、pending 功能验收项及一个可复现 bug 的执行票。用户要求实现并明确暂不做功能验收、不提交。工程验证和 review 通过后，本地应 resolved，远程应正文 resolved 且平台实际 closed；Plan/Spec 仍 pending/开放，`/find` 显示“开发完成，待功能验收”，不把方案批准当作用户验收。
+本地和模拟远程分别准备已批准 Plan、pending 功能验收项及一个可复现 bug 的执行票。用户要求实现并明确暂不做功能验收、不提交。工程验证和 review 通过后，本地应 resolved，远程应正文 resolved 且平台实际 closed；Plan/Spec 仍 pending/开放，`/flow-status` 显示“开发完成，待功能验收”，不把方案批准当作用户验收。
 
 另外准备必要检查实际失败或未运行、以及平台 close 返回 403 的案例。前者仍不完成工程票，后者分别显示工程完成与关闭未同步并复读实际状态，不无限重试、不伪报已关闭。只读查询必须涵盖 closed 票，查询前后产物不变。
 
@@ -52,31 +52,31 @@
 
 ## 功能流程图
 
-准备一个已有 CLI 测试边界的小项目，提供已确认的功能需求，包含用户入口、选择、正常结果、失败与退出方式。用户要求用 `/to-spec` 保存需求，所有测试边界已确认，不实现功能。
+准备一个已有 CLI 测试边界的小项目，提供已确认的功能需求，包含用户入口、选择、正常结果、失败与退出方式。用户要求用 `/flow-spec` 保存需求，所有测试边界已确认，不实现功能。
 
 核对生成 spec：方案概述中的 flowchart 能沿箭头走完上述业务路径，判断分支与需求一致，没有虚构自动重试或新业务；模块影响用文字列出。原有调用时序图保留，流程图的节点不是服务/文件依赖。实际解析或渲染 Mermaid，检查图源语法；不以标题或关键词匹配代替业务走查。
 
 ## 远程独立 Plan issue
 
-使用隔离的模拟远程 tracker，提供 Spec issue、现有代码与已确认的技术约束，执行 `/to-plan` 生成可 review 的方案。只允许操作模拟 tracker，不访问真实 GitHub/GitLab。
+使用隔离的模拟远程 tracker，提供 Spec issue、现有代码与已确认的技术约束，执行 `/flow-plan` 生成可 review 的方案。只允许操作模拟 tracker，不访问真实 GitHub/GitLab。
 
 核对：生成独立 Plan issue，正文包含完整现行方案、`Spec:`、批准状态；Spec 正文反向引用 Plan，评论不保存现行方案，本地不维护第二份 plan。用户未批准时草案保持待 review，不能因 issue 已关闭而拆票或开工。
 
-再提供同一 feature 的增量 Spec 与已有 Plan 引用，执行方案更新与拆票走查：复用同一 Plan issue，ticket 用 Spec 版本及 Plan issue/P<N> 分别关联，Plan 回填 tickets；Spec 版本保存方式沿用 tracker 的既有约定。使用 `/find` 核对远程引用和批准状态，不要求本地 `.scratch` 存在。
+再提供同一 feature 的增量 Spec 与已有 Plan 引用，执行方案更新与拆票走查：复用同一 Plan issue，ticket 用 Spec 版本及 Plan issue/P<N> 分别关联，Plan 回填 tickets；Spec 版本保存方式沿用 tracker 的既有约定。使用 `/flow-status` 核对远程引用和批准状态，不要求本地 `.scratch` 存在。
 
 ## GitHub 原生归属与列表展示
 
 使用模拟 GitHub tracker，提供旧版 CLI（无 parent 参数，但可用 gh api）、Spec/Epic、已确认的方案与票据粒度。模拟 issue number 与数值 id 必须不同，记录实际读写请求。只允许操作模拟数据，不访问真实 GitHub。
 
-执行 `/to-plan`、`/to-tickets` 后核对实际 parent/sub-issues 图、正文 Parent/Spec/Plan、类型标签及独立正文；重复调用不重复建单或重复挂载。分别测试目标 Project 已提供和未提供；没有 Project 不创建它或本地第二套 tracker。再提供已有其他父级、权限失败与只读 `/find` 请求，核对不强制改父级、不把错误当作无父级、不伪报已同步，查询不发写请求。
+执行 `/flow-plan`、`/flow-todo` 后核对实际 parent/sub-issues 图、正文 Parent/Spec/Plan、类型标签及独立正文；重复调用不重复建单或重复挂载。分别测试目标 Project 已提供和未提供；没有 Project 不创建它或本地第二套 tracker。再提供已有其他父级、权限失败与只读 `/flow-status` 请求，核对不强制改父级、不把错误当作无父级、不伪报已同步，查询不发写请求。
 
-使用另建 Spec v2 issue 的同 feature 变更执行 `/amend`，核对仅在旧父级等于先前 Spec 且版本证据一致时迁移同一个 Plan；新票仍挂 Plan，旧票的版本和状态不重写。父级与当前版本并发变化时报告冲突，不覆盖。
+使用另建 Spec v2 issue 的同 feature 变更执行 `/flow-amend`，核对仅在旧父级等于先前 Spec 且版本证据一致时迁移同一个 Plan；新票仍挂 Plan，旧票的版本和状态不重写。父级与当前版本并发变化时报告冲突，不覆盖。
 
 ## 无 GitHub 的本地层级
 
-准备没有 remote 的临时项目、本地 tracker、inline 模式和已确认的小功能。执行 `/to-spec`、`/to-plan`、`/to-tickets`，检查 `.scratch/README.md` 入口与 feature INDEX 的链接可实际定位到文件，Parent 字段与树一致，仍为每票一个平铺文件。首次保存 Spec 时就有索引，不等待 amend；单票小改动省略 Spec/Plan 时也能只登记真实 ticket，不补造文档。
+准备没有 remote 的临时项目、本地 tracker、inline 模式和已确认的小功能。执行 `/flow-spec`、`/flow-plan`、`/flow-todo`，检查 `.scratch/README.md` 入口与 feature INDEX 的链接可实际定位到文件，Parent 字段与树一致，仍为每票一个平铺文件。首次保存 Spec 时就有索引，不等待 /flow-amend；单票小改动省略 Spec/Plan 时也能只登记真实 ticket，不补造文档。
 
-在同一 feature 已有 v1、旧票和 Plan 时执行 `/amend`。核对旧文件保留，新 Spec 为当前入口，Plan 就地更新，新票续接编号；INDEX 保留版本与历史票链接但不复制 Status 或批准状态。随后只修改源 ticket 的 Status，执行 `/find` 应读取新状态、区分历史/当前执行层，并输出可点击的层级；索引缺失或失效时只报告，文件内容和状态保持不变。
+在同一 feature 已有 v1、旧票和 Plan 时执行 `/flow-amend`。核对旧文件保留，新 Spec 为当前入口，Plan 就地更新，新票续接编号；INDEX 保留版本与历史票链接但不复制 Status 或批准状态。随后只修改源 ticket 的 Status，执行 `/flow-status` 应读取新状态、区分历史/当前执行层，并输出可点击的层级；索引缺失或失效时只报告，文件内容和状态保持不变。
 
 ## 测试复用与替代验证
 

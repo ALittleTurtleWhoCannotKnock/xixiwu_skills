@@ -121,7 +121,7 @@ sequenceDiagram
 
     main->>sub: 分派 ticket
     sub-->>main: (return) TDD 报告
-    main->>human: 核对 + 触发 simplify
+    main->>human: 核对 + 触发 /flow-simplify
     human-->>main: (return) 确认通过
     main->>main: 提交
 ```

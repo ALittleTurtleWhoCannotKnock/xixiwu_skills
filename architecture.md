@@ -3,18 +3,18 @@
 ```mermaid
 flowchart TB
     subgraph DEV["01 / 开发者"]
-        init["/init-dev-flow<br/>三项配置"]
+        init["/flow-init<br/>三项配置"]
         checkpoint["人工确认<br/>checkpoint"]
     end
 
     subgraph MAIN["02 / 主会话（编排）"]
-        grill["/grill-with-docs<br/>对齐需求"]
-        spec["/to-spec<br/>四段式 + seams"]
-        plan["/to-plan<br/>技术蓝图 + 人工审"]
-        tickets["/to-tickets<br/>垂直切片 + 依赖"]
-        implement["/implement<br/>编排 + 核对 + Step3.5 修正"]
-        find["/find<br/>只读进度快照"]
-        amend["/amend<br/>已实现 spec 增量演进"]
+        grill["/flow-clarify<br/>需求澄清"]
+        spec["/flow-spec<br/>规格定义 + seams"]
+        plan["/flow-plan<br/>方案规划 + 人工审"]
+        tickets["/flow-todo<br/>任务拆分 + 依赖"]
+        implement["/flow-do<br/>实现验证 + Step3.5 修正"]
+        find["/flow-status<br/>只读进度快照"]
+        amend["/flow-amend<br/>已实现 spec 增量演进"]
         commit["提交<br/>按 commit-strategy"]
     end
 
@@ -61,15 +61,15 @@ flowchart TB
 | 泳道 | 职责 |
 |------|------|
 | 01 / 开发者 | 发起命令、人工确认（checkpoint） |
-| 02 / 主会话 | 编排：grill → spec → plan（审）→ tickets → implement（含 Step 3.5 ticket 修正）、find、amend |
+| 02 / 主会话 | 编排：flow-clarify → flow-spec → flow-plan（审）→ flow-todo → flow-do（含 Step 3.5 ticket 修正）、flow-status、flow-amend |
 | EX / 执行型子 agent | 纯执行：scout（侦察）、implementer（实现与验证）、simplifier（清理）、contract-writer（契约）、exporter（导出），不提交 |
 | 04 / 产出物 | 配置、tracker 中的 Spec/Plan/tickets/contracts、本地版本索引或远程版本引用、代码与测试 |
 
 ## 关键流转
 
-- **主流程（实线）**：init → grill → spec → plan（人工审）→ tickets → implement → 人工确认 → 提交
-- **增量演进**：已实现 Spec 有变动 → amend → 保存增量版本、更新当前版本引用与同一 Plan 正文、续接 ticket → implement
-- **分派（虚线）**：spec → scout；implement → implementer / simplifier / contract-writer
+- **主流程（实线）**：flow-init → flow-clarify → flow-spec → flow-plan（人工审）→ flow-todo → flow-do → 人工确认 → 提交
+- **增量演进**：已实现 Spec 有变动 → flow-amend → 保存增量版本、更新当前版本引用与同一 Plan 正文、续接 ticket → flow-do
+- **分派（虚线）**：flow-spec → scout；flow-do → implementer / simplifier / contract-writer
 - **版本与状态管理**：本地由 INDEX 记录当前 Spec，远程按 tracker 的版本引用及 Plan 正文 `Spec:` 核对；ticket 用 `Spec:` / `Plan:` 分别关联。默认 `ready → claimed → code-complete → resolved`，搁置用 `parked`，以 tracker 声明为准。每票自动验证后更新依赖，squash 不阻塞下游；最终验收与 checkpoint 通过才 resolved。共享定义见 `_agents/workflow-contract.md`
 - **人工卡点**：simplifier 报告 → 人工确认 → 提交
 

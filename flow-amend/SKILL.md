@@ -1,9 +1,9 @@
 ---
-name: amend
+name: flow-amend
 description: "Handle confirmed changes to an implemented feature with an incremental Spec version, current-version index, the same updated plan, and follow-on tickets. Check whether the change actually requires redesign; keep the interactive decisions in the main session."
 ---
 
-# Amend
+# Flow Amend
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -52,14 +52,14 @@ Classify the change and present the judgment:
 |-------|---------|--------|
 | Surface | Fields, copy, boundary checks, defaults | New Spec version and follow-on tickets |
 | Local | One implementation choice, library, or module responsibility | Incremental version and tickets |
-| Fundamental | Architectural assumptions, main flow, non-goals, or most decisions overturned | Stop incremental work and recommend `/to-spec` |
+| Fundamental | Architectural assumptions, main flow, non-goals, or most decisions overturned | Stop incremental work and recommend `/flow-spec` |
 
 For a fundamental change, explain the concrete issue, for example:
 
 ```
 这个变动动摇了 spec 的核心决策（具体：[哪条]）。
 在原 spec 上打补丁会在烂地基上续建。
-建议：重新走 /to-spec 生成全新 spec。
+建议：重新走 /flow-spec 生成全新 spec。
 仍要强制增量吗？（不推荐）
 ```
 
@@ -155,7 +155,7 @@ A new ticket's `Parent:` is the same Plan or the shared fallback, **not the old 
 
 ### Step 7: Hand off to implementation
 
-Use `/implement` when new tickets are ready. It reads INDEX/the remote current reference, checks the Plan's `Spec:`, and uses v(N+1), referring back to v(N) for context.
+Use `/flow-do` when new tickets are ready. It reads INDEX/the remote current reference, checks the Plan's `Spec:`, and uses v(N+1), referring back to v(N) for context.
 
 ## Outputs
 
@@ -165,4 +165,4 @@ Use `/implement` when new tickets are ready. It reads INDEX/the remote current r
 
 ## Boundaries and related stages
 
-Use this for surface/local evolution and traceable history, not a new feature, fundamental redesign, or overwriting history. Fundamental changes return to `/to-spec`; ready tickets use `/implement`. Scout may inspect current code in Step 1 according to execution-mode.
+Use this for surface/local evolution and traceable history, not a new feature, fundamental redesign, or overwriting history. Fundamental changes return to `/flow-spec`; ready tickets use `/flow-do`. Scout may inspect current code in Step 1 according to execution-mode.

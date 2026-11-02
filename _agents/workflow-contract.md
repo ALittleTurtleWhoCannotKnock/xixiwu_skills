@@ -27,7 +27,7 @@ Read the tracker declaration. Each artifact has one current authoritative store:
 - Tickets separate Spec version from Plan package. Local example: `Plan: plan.md#P2`; remote: `Plan: #101 / P2`, with full URLs across repositories. P2 is a logical body package, not a platform-generated Markdown anchor.
 - Keep the remote current plan out of Spec comments and avoid a second local master. Comments hold discussion, approval evidence, and change reasons; the body holds the approach and `**状态**: 待 review` or `**状态**: 已批准（日期）`.
 - Native open/closed does not establish plan approval or remove execution restrictions. Read the stamp and actual authorization.
-- Amend updates this same Plan body/Spec reference, not plan-vN. Retain the tracker's Spec-version convention; issue numbers do not determine versions.
+- `/flow-amend` updates this same Plan body/Spec reference, not plan-vN. Retain the tracker's Spec-version convention; issue numbers do not determine versions.
 - When continuing an old comment-only plan, migrate its current content into an independent issue, retain history/evidence, and update touched references. Read-only queries only recommend migration.
 
 <a name="归属层级与列表展示"></a>
@@ -80,11 +80,11 @@ Plan: [plan.md](plan.md)
 
 ### Version evolution and state
 
-Amend preserves one Plan. New Specs inherit the confirmed Epic; update Plan Spec/Parent to the current version. Preserve existing ticket versions/states and attach new tickets to the same Plan.
+`/flow-amend` preserves one Plan. New Specs inherit the confirmed Epic; update Plan Spec/Parent to the current version. Preserve existing ticket versions/states and attach new tickets to the same Plan.
 
 If Spec versions share one issue, native Plan parenting is unchanged. If a version gets a new Spec issue, reparent only after confirming the old parent equals the prior Spec read for this same feature, the change is approved, and a fresh read shows no concurrent change. Do not move historical tickets or replace an unexplained parent; stop/report conflicts.
 
-Tree shape, child-close ratios, and folder layout prove neither approach approval nor functional acceptance. Do not close parents, promote state, or release dependencies on that basis. Find reports actual version/state/relationship conflicts without repairing them.
+Tree shape, child-close ratios, and folder layout prove neither approach approval nor functional acceptance. Do not close parents, promote state, or release dependencies on that basis. `/flow-status` reports actual version/state/relationship conflicts without repairing them.
 
 <a name="ticket-字段"></a>
 ## Ticket fields
@@ -149,7 +149,7 @@ New trackers default to ready/claimed/resolved/parked and `ready → claimed →
 - The main session checks evidence and resolves automatically; executing children only report. Keep failed/unrun checks, incomplete scope, or blocking review findings claimed (or declared parked for an external block). Do not transfer engineering failures into upper acceptance to justify closing.
 - Locally Status resolved plus evidence is closure. Remotely synchronize the body, close, and reread state. GitHub may use [`gh issue close <引用> --reason completed`](https://cli.github.com/manual/gh_issue_close) or a supported equivalent. On permission/network failure, distinguish engineering complete from native closure unsynchronized; never claim success, reimplement passed code, or retry indefinitely.
 - Resolved releases ticket dependencies, but explicit external validation/publication/delivery conditions remain separate. Deferred commits do not block closure; record branch/worktree and committed/uncommitted facts rather than calling closure publication.
-- Code-complete is legacy compatibility only. Preserve its declared dependency semantics and require evidence. Before adopting this flow, align the current repository's completion declaration; then verify this ticket and finish it. Do not bulk-migrate history or close from the old value alone. Find never writes.
+- Code-complete is legacy compatibility only. Preserve its declared dependency semantics and require evidence. Before adopting this flow, align the current repository's completion declaration; then verify this ticket and finish it. Do not bulk-migrate history or close from the old value alone. `/flow-status` never writes.
 - Commit/push still needs explicit authorization; its checkpoint is not a ticket-closure gate. A later cleanup/regression may reopen affected engineering tickets with reasons and dependency review, not merely because human functional acceptance is pending.
 
 <a name="功能验收与票级关闭"></a>
@@ -159,8 +159,8 @@ New trackers default to ready/claimed/resolved/parked and `ready → claimed →
 - The owner records `Acceptance: pending / accepted / changes-requested`, items, linked tickets, and user confirmation/feedback. Plan approach approval (`待 review`/`已批准`) is not functional acceptance. If a later Plan replaces Spec-owned acceptance, transfer current records and leave a pointer, retaining history instead of duplicate states.
 - Hand off human experience/functional-device checks with their source tickets and unverified facts. Do not move failed/unrun automated, integration, or explicitly required engineering-device checks upward under another name. Report engineering and human acceptance independently.
 - All tickets resolved means engineering complete/awaiting functional acceptance, not automatic accepted/parent closure. Only explicit user functional acceptance plus completed relevant engineering work records accepted and evidence. Locally that ends acceptance without changing plan approach approval; remotely close and verify that acceptance issue separately. Do not cascade to broader Epic/Spec scope.
-- User-reported issues record changes-requested and keep the parent open. Add scoped follow-on work or reopen a specifically identified regression, not all historical tickets. Changed acceptance scope during amend resets pending while retaining prior records; old accepted state does not cover a new version.
-- Find reports engineering progress, native closure sync, and acceptance separately. Missing Acceptance/evidence remains unknown; child counts, approach approval, Git activity, or closed parents do not prove user acceptance. INDEX remains navigation only.
+- User-reported issues record changes-requested and keep the parent open. Add scoped follow-on work or reopen a specifically identified regression, not all historical tickets. Changed acceptance scope during /flow-amend resets pending while retaining prior records; old accepted state does not cover a new version.
+- `/flow-status` reports engineering progress, native closure sync, and acceptance separately. Missing Acceptance/evidence remains unknown; child counts, approach approval, Git activity, or closed parents do not prove user acceptance. INDEX remains navigation only.
 
 <a name="改动规模与输入"></a>
 ## Change size and inputs

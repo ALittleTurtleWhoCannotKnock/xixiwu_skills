@@ -1,6 +1,6 @@
 # Dev Flow Skills 使用手册
 
-一套你自己的开发流程：初始化配置 → 提需求 → 拆需求 → 实施蓝图 → 拆 ticket → 实现，外加调试、清理、契约、会话导出等辅助技能。跨 Pi / Codex / Claude Code 通用。
+一套你自己的开发流程：流程初始化 → 需求澄清 → 规格定义 → 方案规划 → 任务拆分 → 实现与验证，外加调试、清理、契约、会话导出等辅助技能。跨 Pi / Codex / Claude Code 通用。
 
 > 本手册是叙事走查。每个技能的**权威定义**以对应的 `SKILL.md` 为准；执行型子 agent 的**执行逻辑**以 `_agents/*.prompt.md` 为准。
 
@@ -10,41 +10,47 @@
 
 在独立目录中克隆或解压完整仓库，执行 `./install.sh all`，也可以把 `all` 换成 `pi`、`claude-code` 或 `codex`。用 `--dry-run` 预览安装项；Git 用户后续在原始仓库执行 `git pull --ff-only && ./install.sh all` 更新。安装位置、备份与旧副本迁移规则见 [README](./README.md#安装与更新)。
 
-技能和共享 prompt 链接到同一份仓库，已有 agent 的模型及其他 frontmatter 配置保留。安装后，在自己的项目运行 `/init-dev-flow` 完成基础模型等配置；安装器不代替这一步。
+技能和共享 prompt 链接到同一份仓库，已有 agent 的模型及其他 frontmatter 配置保留。安装后，在自己的项目运行 `/flow-init` 完成基础模型等配置；安装器不代替这一步。
 
 ## 一页总览
 
 ```
-/init-dev-flow（每个仓库首次配置，缺项可单独补齐）
-        ↓
-/grill-with-docs → /to-spec → /to-plan → /to-tickets → /implement
-     提需求          拆需求      实施蓝图      拆 ticket       实现
-                          （人工审）                      │
-                                                （涉及端点）→ /to-api-contract
+/flow-init       流程初始化（缺项可单独补齐）
+    ↓
+/flow-clarify    需求澄清
+    ↓
+/flow-spec       规格定义
+    ↓
+/flow-plan       方案规划（人工审）
+    ↓
+/flow-todo       任务拆分
+    ↓
+/flow-do         实现与验证
+    └─ 涉及后端端点 → /flow-api（接口契约提取）
 ```
 
-辅助技能：`/amend`（已实现 spec 的变动）、`/diagnosing-bugs`（调试）、`/simplify`（提交前清理）、`/export-session`（导出会话）、`/to-api-contract`（接口契约）。
+辅助技能：`/flow-amend`（已实现 spec 的变动）、`/flow-debug`（调试）、`/flow-simplify`（提交前清理）、`/flow-export`（导出会话）、`/flow-api`（接口契约）。
 
 ### 阶段速查
 
 | 你的状态 | 执行命令 | 产出 |
 |---------|---------|------|
-| 新仓库首次接入或补语言 | `/init-dev-flow` | 四项配置（tracker / 提交策略 / 执行模式与模型 / 语言） |
-| 需求在脑子里，怕 agent 理解错 | `/grill-with-docs` | 对齐后的需求 + CONTEXT.md |
-| 需求已对齐，需要方案文档 | `/to-spec` | spec（含 seams 分析 + mermaid 图），存入 tracker |
-| spec 已确认，需要确定技术路径 | `/to-plan` | 技术决策、包分解、改动锚点与验证策略，经用户批准 |
-| plan 已批准，需要拆分执行 | `/to-tickets` | 带依赖关系的 ticket 列表；单票小改动可明确省略 plan |
-| ticket 已确认，开始写代码 | `/implement` | 可运行代码 + 测试 |
-| 已实现 spec 有变动 | `/amend` | spec-v(N+1) + 更新 INDEX + 新 ticket |
-| 想查看当前进度 | `/find` | 只读进度快照：阶段、Status、阻塞、下一步 |
-| 后端 ticket 涉及端点 | （由 /implement 触发）`/to-api-contract` | 接口契约片段 |
-| 提交前 | （由 /implement 触发）`/simplify` | 清理后的代码 + 人工确认 |
-| 遇到难调的 bug | `/diagnosing-bugs` | 修复 + 回归测试 |
-| 要沉淀会话记录 | `/export-session` | session.md + session.jsonl |
+| 新仓库首次接入或补语言 | `/flow-init` | 四项配置（tracker / 提交策略 / 执行模式与模型 / 语言） |
+| 需求在脑子里，怕 agent 理解错 | `/flow-clarify` | 对齐后的需求 + CONTEXT.md |
+| 需求已对齐，需要方案文档 | `/flow-spec` | spec（含 seams 分析 + mermaid 图），存入 tracker |
+| spec 已确认，需要确定技术路径 | `/flow-plan` | 技术决策、包分解、改动锚点与验证策略，经用户批准 |
+| plan 已批准，需要拆分执行 | `/flow-todo` | 带依赖关系的 ticket 列表；单票小改动可明确省略 plan |
+| ticket 已确认，开始写代码 | `/flow-do` | 可运行代码 + 测试 |
+| 已实现 spec 有变动 | `/flow-amend` | spec-v(N+1) + 更新 INDEX + 新 ticket |
+| 想查看当前进度 | `/flow-status` | 只读进度快照：阶段、Status、阻塞、下一步 |
+| 后端 ticket 涉及端点 | （由 /flow-do 触发）`/flow-api` | 接口契约片段 |
+| 提交前 | （由 /flow-do 触发）`/flow-simplify` | 清理后的代码 + 人工确认 |
+| 遇到难调的 bug | `/flow-debug` | 修复 + 回归测试 |
+| 要沉淀会话记录 | `/flow-export` | session.md + session.jsonl |
 
 ---
 
-## 阶段 0：初始化 — `/init-dev-flow`
+## 阶段 0：流程初始化 — `/flow-init`
 
 **每个仓库首次运行，缺项可单独补齐。** Agent 自动探测 tracker，并确认提交、执行和语言偏好，写入 `docs/agents/`。
 
@@ -60,7 +66,7 @@
 ### 执行
 
 ```
-/init-dev-flow
+/flow-init
 ```
 
 Agent 探测后报告判定，例如：
@@ -80,14 +86,14 @@ Agent 探测后报告判定，例如：
 
 选择分派后，Agent 根据当前工具的实际模型列表引导选择，或由你明确选择继承当前主会话（`inherit`），写入 `execution-mode.md` 的“基础模型”。模板不预填具体模型。Pi 生成 agent 时读取该项目配置；其他工具分派时按支持的格式应用，尚未实际调用的模型明确标注运行未验证。
 
-语言在生成后续文档前确认并保存，配置使用固定键 `interaction_language` 和 `artifact_language`，值由使用者选择。选择中文交互、英文产物后，追问、review 摘要和 `/find` 说明用中文，Spec/Plan/Ticket 的可读内容用英文；协议字段和状态值不翻译。临时指定某一项只影响当前任务；原始会话导出不因产物语言而翻译原文。
+语言在生成后续文档前确认并保存，配置使用固定键 `interaction_language` 和 `artifact_language`，值由使用者选择。选择中文交互、英文产物后，追问、review 摘要和 `/flow-status` 说明用中文，Spec/Plan/Ticket 的可读内容用英文；协议字段和状态值不翻译。临时指定某一项只影响当前任务；原始会话导出不因产物语言而翻译原文。
 
 ### 产出
 
 ```
 docs/agents/
 ├── issue-tracker.md    # tracker 类型（单一事实源）
-├── commit-strategy.md  # 提交策略（simplify 触发时机）
+├── commit-strategy.md  # 提交策略（/flow-simplify 触发时机）
 ├── execution-mode.md   # 执行模式 + 用户确认的基础模型
 └── language.md         # 用户确认的交互语言 + 业务产物语言
 .scratch/README.md      # 本地模式才有
@@ -98,7 +104,7 @@ AGENTS.md               # 根目录指针（新开发者/agent 一眼可见）
 
 ---
 
-## 阶段 1：提需求 — `/grill-with-docs`
+## 阶段 1：需求澄清 — `/flow-clarify`
 
 ### 何时进入
 
@@ -109,7 +115,7 @@ AGENTS.md               # 根目录指针（新开发者/agent 一眼可见）
 ### 执行
 
 ```
-/grill-with-docs
+/flow-clarify
 ```
 
 Agent 连续追问，每次回答后继续挖下一个分支，直到无歧义。
@@ -139,7 +145,7 @@ Agent：明确了。嵌套层级限制？
 
 ---
 
-## 阶段 2：拆需求 — `/to-spec`
+## 阶段 2：规格定义 — `/flow-spec`
 
 ### 何时进入
 
@@ -149,7 +155,7 @@ Agent：明确了。嵌套层级限制？
 ### 执行
 
 ```
-/to-spec
+/flow-spec
 ```
 
 Agent 先读 `docs/agents/issue-tracker.md` 判断 tracker 模式，然后：
@@ -169,12 +175,12 @@ Agent 先读 `docs/agents/issue-tracker.md` 判断 tracker 模式，然后：
 
 ---
 
-## 阶段 2.5：实施蓝图 — `/to-plan`
+## 阶段 2.5：方案规划 — `/flow-plan`
 
 spec 确认后，把技术决策、实现路径与风险在 plan 中确定，再拆执行票。
 
 ```
-/to-plan
+/flow-plan
 ```
 
 Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`；GitHub/GitLab 创建或更新独立 Plan issue，现行方案写在正文：
@@ -194,7 +200,7 @@ Plan 用独立的 `Acceptance: pending / accepted / changes-requested` 记录人
 
 ---
 
-## 阶段 3：拆 ticket — `/to-tickets`
+## 阶段 3：任务拆分 — `/flow-todo`
 
 ### 何时进入
 
@@ -204,7 +210,7 @@ Plan 用独立的 `Acceptance: pending / accepted / changes-requested` 记录人
 ### 执行
 
 ```
-/to-tickets
+/flow-todo
 ```
 
 Agent 会：
@@ -238,7 +244,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 
 ---
 
-## 阶段 4：实现 — `/implement`
+## 阶段 4：实现与验证 — `/flow-do`
 
 这是最复杂、也最能体现"编排与执行分离"的阶段。
 
@@ -250,7 +256,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 ### 执行
 
 ```
-/implement
+/flow-do
 ```
 
 **主会话做编排，执行分派给子 agent（按 execution-mode）：**
@@ -279,7 +285,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
   │      ├─ 工程检查与 review 通过 → resolved / 自动关票，更新依赖
   │      └─ 人工功能验收项 → Plan（无 Plan 时 Spec）
   ├─ 5. 提交节点（读 commit-strategy）
-  │      ├─ 分派 simplify 清理
+  │      ├─ 分派 /flow-simplify 清理
   │      ├─ 人工 checkpoint（你确认）
   │      └─ 提交
   └─ 6. Plan/Spec 功能验收：用户实际确认后记录 accepted 并关闭验收单
@@ -287,7 +293,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 
 **关键边界：**
 
-- **子 agent 不提交、不跑 simplify** —— 这些是主会话在提交节点、经你人工确认后做的
+- **子 agent 不提交、不跑 /flow-simplify** —— 这些是主会话在提交节点、经你人工确认后做的
 - **子 agent 遇到未覆盖的决策会停止并报告**，不猜测、不扩大范围（决策已在 spec/ticket 阶段拍死）
 - **子 agent 报"方向错误"（ticket 方案在现有架构不成立）会触发 Step 3.5**：主会话对齐架构 → 修正 ticket → 按层级判断是否回写 spec → 重新分派；同一 ticket 连续 ≥2 次方向错误则停，转人工
 - **绝不主动提交**：即使全部检查通过，也先停在人工 checkpoint，经你确认才提交
@@ -299,14 +305,14 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 ### 产出
 
 - 可运行的代码（带测试）
-- Review + simplify 通过、经你确认的提交
+- Review + /flow-simplify 通过、经你确认的提交
 - 更新的 ticket 状态
 
 ---
 
 ## 辅助技能
 
-### `/simplify` — 提交前清理
+### `/flow-simplify` — 代码清理
 
 **主会话定 scope（读 commit-strategy），清理分派给 `simplifier` 子 agent。**
 
@@ -317,27 +323,27 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 
 子 agent 按"复用/质量/效率"三维度审查并修复，**不提交**，返回报告。主会话展示报告，**暂停等你确认**后才提交。
 
-### `/to-api-contract` — 接口契约
+### `/flow-api` — 接口契约提取
 
-**后端 ticket 涉及对外端点时，由 `/implement` 触发（也可手动补生成）。**
+**后端 ticket 涉及对外端点时，由 `/flow-do` 触发（也可手动补生成）。**
 
 主会话确认该 ticket 涉及的端点，分派 `contract-writer` 子 agent 从代码/测试提取契约，写入 `.scratch/<feature>/contracts/<ticket>.md`。每个字段必须溯源代码，不杜撰。前端 agent 据此联调。
 
-### `/amend` — 已实现 spec 的需求变动
+### `/flow-amend` — 需求变更
 
 **已实现 spec 有变动时使用，不重走全流程。**
 
-只 grill 变动部分 → 判断增量或重做 → 保存增量 Spec、更新当前版本引用 → 更新同一 plan 正文 → 续接 ticket。旧 Spec 冻结；本地用版本文件与 INDEX，远程沿用 tracker 的 Spec 版本约定并同步 Plan issue 的 `Spec:`，不新建 Plan issue。业务路径变化时更新功能流程图，模块影响保留文字说明。
+只澄清变动部分 → 判断增量或重做 → 保存增量 Spec、更新当前版本引用 → 更新同一 plan 正文 → 续接 ticket。旧 Spec 冻结；本地用版本文件与 INDEX，远程沿用 tracker 的 Spec 版本约定并同步 Plan issue 的 `Spec:`，不新建 Plan issue。业务路径变化时更新功能流程图，模块影响保留文字说明。
 
-同步更新 Plan 的 `Parent:` 和导航，旧票保留原版本与状态。GitHub 新版 Spec 另建 issue 时，只在核实同 feature 的旧父级后迁移同一个 Plan；本地 INDEX 保留历史链接并追加新票。`/find` 只读展示这棵树，状态仍从源文件/issue 读取。
+同步更新 Plan 的 `Parent:` 和导航，旧票保留原版本与状态。GitHub 新版 Spec 另建 issue 时，只在核实同 feature 的旧父级后迁移同一个 Plan；本地 INDEX 保留历史链接并追加新票。`/flow-status` 只读展示这棵树，状态仍从源文件/issue 读取。
 
-### `/export-session` — 导出会话
+### `/flow-export` — 会话导出
 
 **主会话识别工具、确认 issue 绑定，导出分派给 `exporter` 子 agent。**
 
 支持 Claude Code / Codex / Pi（本地 JSONL）和 Cursor（SQLite）。产出双份到 `sessions/<项目>-<issue>-<日期>/`：`session.md`（可读）+ `session.jsonl`（原始存档）。纯格式转换，不总结。
 
-### `/diagnosing-bugs` — 系统化调试
+### `/flow-debug` — 问题诊断
 
 **交互型，留在主会话。** 六阶段纪律：构建反馈循环 → 复现+最小化 → 提出假设 → 插桩 → 修复+回归测试 → 清理。强调"先建 red-capable 循环，再谈修复"。
 
@@ -346,22 +352,22 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 ## 端到端走查：博客评论功能
 
 ```
-Day 1 上午        Day 1 下午       Day 2 上午      Day 2 下午        Day 3 上午
-    │                 │                │                │                │
-    ▼                 ▼                ▼                ▼                ▼
-/init-dev-flow   /grill-with-docs  /to-spec         /to-plan        /to-tickets
-    │                 │                │                │                │
-    ▼                 ▼                ▼                ▼                ▼
-四项配置：        对齐需求：        spec：           plan.md：        tickets：
-- tracker: 本地   - 需登录          - 四段式          - 技术决策表      - 01 prefactor
-- 提交: squash    - 嵌套3层         - seams: HTTP API - 包分解 P1..Pn  - 02 模型+API
-- 执行: 派子 agent - 敏感词过滤      - 存 .scratch/    - 风险点         - 03 嵌套回复
-                  更新 CONTEXT.md    .../spec.md    （人工审 ← 卡点）  （含依赖+来源P）
+Day 1 上午            Day 1 下午            Day 2 上午            Day 2 下午            Day 3 上午
+    │                     │                     │                     │                     │
+    ▼                     ▼                     ▼                     ▼                     ▼
+/flow-init            /flow-clarify         /flow-spec            /flow-plan            /flow-todo
+    │                     │                     │                     │                     │
+    ▼                     ▼                     ▼                     ▼                     ▼
+四项配置：            需求澄清：            规格定义：            方案规划：            任务拆分：
+- tracker: 本地       - 需登录              - 四段式              - 技术决策表          - 01 prefactor
+- 提交: squash        - 嵌套3层             - seams: HTTP API     - 包分解 P1..Pn       - 02 模型+API
+- 执行: 派子 agent    - 敏感词过滤          - 存 .scratch/        - 风险点              - 03 嵌套回复
+                      更新 CONTEXT.md         .../spec.md         （人工审 ← 卡点）     （含依赖+来源P）
 
 Day 4 全天
     │
     ▼
-/implement（逐 ticket）
+/flow-do（逐 ticket）
     │
     ├─ ticket 01: 红绿重构 → 工程核对与 review → resolved / 自动关票，解除 02 依赖
     │     （squash 策略，暂不提交，人工功能验收项留在 Plan）
@@ -369,7 +375,7 @@ Day 4 全天
     ├─ ticket 03: 同上；使用前票的代码与契约
     │
     ▼ 执行票均 resolved；功能显示“开发完成，待功能验收”
-  分派 simplify（scope=累计 diff）→ 修复报告
+  分派 /flow-simplify（scope=累计 diff）→ 修复报告
     │
     ▼ 人工 checkpoint：你确认
   经明确授权统一提交；暂不提交时保留工作区，票级状态不回退
@@ -398,7 +404,7 @@ project/
 │       │   ├── 01-prefactor-extract-content.md
 │       │   ├── 02-comment-model-api.md
 │       │   └── 03-nested-replies.md
-│       └── contracts/                     # /to-api-contract
+│       └── contracts/                     # /flow-api
 │           ├── 02-comment-model-api.md
 │           └── 03-nested-replies.md
 └── src/                                   # 阶段 4 实现
@@ -410,15 +416,15 @@ project/
 
 | 约束 | 说明 |
 |------|------|
-| 先初始化 | 没有 `docs/agents/*.md`，to-spec/to-tickets/implement 会提示先跑 `/init-dev-flow` |
-| 阶段顺序 | 常规 feature：grill → spec → plan（批准）→ tickets → implement；小改动按共享约定明确省略 |
+| 先初始化 | 没有 `docs/agents/*.md`，flow-spec/flow-todo/flow-do 会提示先跑 `/flow-init` |
+| 阶段顺序 | 常规 feature：clarify → spec → plan（批准）→ todo → do；小改动按共享约定明确省略 |
 | 产出物即输入 | spec → plan → tickets → 代码；简化票包含被省略文档中的必要决策 |
 | 决策前置 | 产品边界在 spec，技术方案在 plan，票级工程条件在 ticket；人工功能验收集中到 Plan/Spec |
 | 状态与提交 | 本票工程工作通过即 resolved/自动关闭；功能 Acceptance 与提交授权分别记录，均不阻止票级完成 |
-| 子 agent 边界 | 不提交、不跑 simplify、遇未授权决策停止并报告、报方向错误触发 Step 3.5 |
+| 子 agent 边界 | 不提交、不跑 /flow-simplify、遇未授权决策停止并报告、报方向错误触发 Step 3.5 |
 | 绝不主动提交 | 任何阶段、任何 agent，未经你明确指示都把改动留在工作区 |
 | 配置可覆盖 | 四项配置按项目保存，单次明确要求可临时覆盖对应项 |
-| 交互型留主会话 | grill/diagnosing/spec/plan/tickets 需要和你对话，不派子 agent |
+| 交互型留主会话 | flow-clarify/flow-debug/flow-spec/flow-plan/flow-todo 需要和你对话，不派子 agent |
 
 ---
 

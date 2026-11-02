@@ -1,9 +1,9 @@
 ---
-name: find
+name: flow-status
 description: "Read-only repository or feature progress snapshot with ownership hierarchy, current-versus-history ticket states, closure synchronization, and functional acceptance. Use when resuming work, changing sessions, or handing off context."
 ---
 
-# Find Progress
+# Flow Status
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -13,7 +13,7 @@ Aggregate progress **read-only**: do not change files, states, commits, or remot
 
 ### Step 1: Identify tracker and state definitions
 
-Read the [shared contract](../_agents/workflow-contract.md) and `docs/agents/issue-tracker.md`. If the declaration is absent, report uninitialized/request `/init-dev-flow` and stop. Local mode scans `.scratch`; remote mode reads the declared issue source. Report inaccessible data instead of guessing.
+Read the [shared contract](../_agents/workflow-contract.md) and `docs/agents/issue-tracker.md`. If the declaration is absent, report uninitialized/request `/flow-init` and stop. Local mode scans `.scratch`; remote mode reads the declared issue source. Report inaccessible data instead of guessing.
 
 Read this tracker's Status values dynamically. New defaults are ready/claimed/resolved/parked; old trackers may declare code-complete. Without a declaration, use the four defaults with a warning. An old intermediate state alone proves neither engineering completion nor functional acceptance.
 

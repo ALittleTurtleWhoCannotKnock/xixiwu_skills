@@ -1,9 +1,9 @@
 ---
-name: implement
+name: flow-do
 description: "Implement and validate a confirmed ticket using appropriate checks and reused tests. The main session reviews evidence and automatically closes engineering-complete tickets; human functional acceptance stays in Plan/Spec and Git commits remain separately authorized."
 ---
 
-# Implement
+# Flow Do
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -85,9 +85,9 @@ If the plan is technically unable to satisfy a product decision, report the conf
 > 修正（ticket NN）：[一句话说明修正内容 + 依据]。原理解 [X] 在现有架构不成立，修正为 [Y]。
 ```
 
-This corrects a still-working Spec in place, without a new version. `/amend` versions already implemented requirements.
+This corrects a still-working Spec in place, without a new version. `/flow-amend` versions already implemented requirements.
 
-5. Redispatch the corrected ticket. If the same ticket produces direction errors on **two consecutive attempts**, stop automatic correction/redispatch. Request human alignment or a return to `/to-spec`; do not loop indefinitely.
+5. Redispatch the corrected ticket. If the same ticket produces direction errors on **two consecutive attempts**, stop automatic correction/redispatch. Request human alignment or a return to `/flow-spec`; do not loop indefinitely.
 
 ### Step 4: Review engineering completion
 
@@ -106,7 +106,7 @@ Check the report on two axes:
 Check drift against both product and technical decisions. Treat deviations as P0 and confirm whether to fix implementation or explicitly revise decisions. Invent no findings; state that there are no blockers when appropriate. Return P0/P1 for correction or a user decision.
 
 **After each ticket, without waiting for human acceptance or a commit:**
-- For external HTTP endpoints, first generate required `/to-api-contract` deliverables for integration.
+- For external HTTP endpoints, first generate required `/flow-api` deliverables for integration.
 - When implementation, mandatory engineering checks, review, and required artifacts pass, the main session writes `Status: resolved`. Locally retain evidence; remotely call close and reread native state. Do not request per-ticket user acceptance.
 - Register remaining human functional items in Plan/Spec, or the shared small-change handoff when both are omitted. Failed/unrun engineering checks remain claimed and cannot be moved upward to justify closure.
 - Record commands/results, change location, and Git facts; release dependencies and continue eligible work. If native close fails, report engineering complete/native still open and the actual cause; do not claim closure or reimplement passed work.
@@ -118,7 +118,7 @@ Read commit-strategy; if absent, request initialization. Per-ticket handles a co
 Commit/push still requires explicit authorization. If the user defers committing, or this task is not preparing a commit, leave the working tree and record the later Git work. Do not force cleanup or a Git checkpoint merely to close tickets; continue eligible engineering work.
 
 When preparing a commit, reuse existing explicit authorization:
-1. Invoke `/simplify` under execution-mode, scoped by commit-strategy and the user's limits.
+1. Invoke `/flow-simplify` under execution-mode, scoped by commit-strategy and the user's limits.
 2. Rerun checks after cleanup and regenerate changed contracts. Reopen affected tickets and recheck downstream dependencies on actual engineering regression; human functional checks stay above.
 3. Present results and handle the human commit checkpoint. Commit only when explicitly authorized; otherwise preserve changes.
 4. A deferred commit does not undo Step 4 closure. Reopen only for actual engineering issues. Keep Git, ticket completion, and functional acceptance distinct.

@@ -1,9 +1,9 @@
 ---
-name: grill-with-docs
+name: flow-clarify
 description: "Align requirements through focused questions and maintain the project glossary in CONTEXT.md. Use for new features, complex changes, or shared domain terminology."
 ---
 
-# Grill With Docs
+# Flow Clarify
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -73,4 +73,4 @@ Summarize the scope, exclusions, important decisions, and changes to CONTEXT.md.
 
 ## Next
 
-Use `/to-spec` to turn the aligned discussion into a structured Spec.
+Use `/flow-spec` to turn the aligned discussion into a structured Spec.

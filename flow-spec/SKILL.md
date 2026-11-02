@@ -1,15 +1,15 @@
 ---
-name: to-spec
-description: "Turn aligned requirements into a four-section product Spec with business flow, sequence flow, test seams, and module impact. Leave technical implementation decisions to /to-plan."
+name: flow-spec
+description: "Turn aligned requirements into a four-section product Spec with business flow, sequence flow, test seams, and module impact. Leave technical implementation decisions to /flow-plan."
 ---
 
-# To Spec
+# Flow Spec
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
 ## When to use
 
-- Requirements are aligned through `/grill-with-docs`.
+- Requirements are aligned through `/flow-clarify`.
 - A reviewable, traceable product document is needed.
 - Collaborators need shared context.
 
@@ -19,7 +19,7 @@ Follow the target project's interaction and artifact languages from [language po
 2. **Analyze test seams**, preferring existing boundaries.
 3. **Make non-goals explicit** to prevent scope creep.
 4. **Identify affected and unaffected modules.**
-5. **Own product intent, not implementation.** Answer what to do, exclude, and assign. Libraries and implementation choices belong to `/to-plan`.
+5. **Own product intent, not implementation.** Answer what to do, exclude, and assign. Libraries and implementation choices belong to `/flow-plan`.
 6. **Examine significant decisions before recording them.** Briefly steelman disputed product choices: restate intent, examine both directions, and identify decisive variables before filling the key-decision table. Apply the global AGENTS.md significance criteria: cross-module impact, alternatives, non-goals, architectural conflict, user-visible behavior, or irreversibility.
 
 ## Workflow
@@ -32,7 +32,7 @@ In subagent mode, send a read-only scout to the relevant code and save a concise
 
 In inline mode, the main session follows `_agents/scout.prompt.md` directly. In either mode, use `CONTEXT.md` terminology and respect existing `docs/adr/`; if absent, continue from code and discussion.
 
-The scout prompt is the sole discovery source. Its brief feeds seam analysis, `/to-tickets`, and `/implement`.
+The scout prompt is the sole discovery source. Its brief feeds seam analysis, `/flow-todo`, and `/flow-do`.
 
 ### Step 2: Analyze seams
 
@@ -136,14 +136,14 @@ sequenceDiagram
 
 ### Step 4: Save
 
-Read `docs/agents/issue-tracker.md`; if missing, request `/init-dev-flow`. Follow its paths/formats: locally `.scratch/<feature-slug>/spec.md` with a kebab-case feature slug derived from the requirement; remotely use the declared GitHub/GitLab tool.
+Read `docs/agents/issue-tracker.md`; if missing, request `/flow-init`. Follow its paths/formats: locally `.scratch/<feature-slug>/spec.md` with a kebab-case feature slug derived from the requirement; remotely use the declared GitHub/GitLab tool.
 
 Under the [ownership/navigation rules](../_agents/workflow-contract.md#归属层级与列表展示), write `Parent:` at the top: the explicitly identified Epic, or `none`. Keep the four-section body.
 
 - **Local:** Create/update the feature INDEX and `.scratch/README.md` entry. Link the current Spec and actual artifacts only; do not create a placeholder Plan.
 - **GitHub:** Use `[Spec]` and the project's type label. If an Epic is specified, establish and verify the native parent relationship. Use the configured Project when present; report unsynchronized items.
 
-When `/to-plan` later creates the plan, backlink `Plan:` from the current Spec. Locally update only the current Spec/index, preserving frozen versions. Remotely maintain separate bodies rather than placing the current plan in Spec comments.
+When `/flow-plan` later creates the plan, backlink `Plan:` from the current Spec. Locally update only the current Spec/index, preserving frozen versions. Remotely maintain separate bodies rather than placing the current plan in Spec comments.
 
 The Spec defines product acceptance criteria. If tickets proceed without a Plan, add a functional-acceptance subsection within the approach and `Acceptance: pending`; this Spec owns acceptance. With a Plan, link its acceptance entry instead. Maintain one acceptance state, without adding a fifth top-level Spec section.
 
@@ -153,4 +153,4 @@ Present the Spec summary; proceed after user confirmation.
 
 ## Outputs and next stage
 
-Produce a structured Spec with business flow, test seams, sequence flow, and explicit module boundaries/impact. After confirmation, use `/to-plan` for the technical choices, implementation path, risks, and approval, then `/to-tickets` for execution details.
+Produce a structured Spec with business flow, test seams, sequence flow, and explicit module boundaries/impact. After confirmation, use `/flow-plan` for the technical choices, implementation path, risks, and approval, then `/flow-todo` for execution details.

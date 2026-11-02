@@ -12,6 +12,13 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 LOCATIONS = {"pi": ".pi/agent", "claude-code": ".claude", "codex": ".agents"}
+RENAMED_SKILLS = {
+    "init-dev-flow": "flow-init", "grill-with-docs": "flow-clarify",
+    "to-spec": "flow-spec", "to-plan": "flow-plan", "to-tickets": "flow-todo",
+    "implement": "flow-do", "find": "flow-status", "amend": "flow-amend",
+    "simplify": "flow-simplify", "diagnosing-bugs": "flow-debug",
+    "e2e-test": "flow-e2e", "to-api-contract": "flow-api", "export-session": "flow-export",
+}
 
 
 def frontmatter(data, path):
@@ -32,6 +39,20 @@ def frontmatter(data, path):
 
 def exists(path):
     return path.exists() or path.is_symlink()
+
+
+def is_previous_skill(path, old, new):
+    if path.is_symlink() and path.resolve() in (ROOT / old, ROOT / new):
+        return True
+    installed = path / "SKILL.md"
+    current = ROOT / new / "SKILL.md"
+    if not installed.is_file() or not current.is_file():
+        return False
+    header, _ = frontmatter(current.read_bytes(), current)
+    previous_header = header.replace(f"\nname: {new}\n".encode(), f"\nname: {old}\n".encode(), 1)
+    for old_command, new_command in RENAMED_SKILLS.items():
+        previous_header = previous_header.replace(f"/{new_command}".encode(), f"/{old_command}".encode())
+    return installed.read_bytes().replace(b"\r\n", b"\n").startswith(previous_header)
 
 
 def main():
@@ -73,12 +94,17 @@ def main():
                           if exists(legacy / name))
             skill_directories.append(legacy)
 
-    # Retire old whole-bundle copies so recursive loaders do not find stale skills.
+    # Retire identifiable old names and whole bundles without taking unrelated personal skills.
     for directory in skill_directories:
         if directory.is_dir():
+            for old, new in RENAMED_SKILLS.items():
+                path = directory / old
+                if exists(path) and is_previous_skill(path, old, new):
+                    retire.append(path)
             for old in directory.iterdir():
                 if ((old / "_agents").is_dir()
-                        and all((old / skill.name / "SKILL.md").is_file() for skill in skills)):
+                        and any(all((old / name / "SKILL.md").is_file() for name in names)
+                                for names in ([skill.name for skill in skills], RENAMED_SKILLS))):
                     retire.append(old)
 
     # Generate into an isolated directory, then validate every existing header before writing.
@@ -160,7 +186,7 @@ def main():
                 destination.chmod(mode)
     if not links and not writes and not retire:
         print("安装内容已是当前版本。")
-    print(f"{prefix}在目标项目运行 init-dev-flow，引导配置执行模式与基础模型；已有项目配置保持原样。")
+    print(f"{prefix}在目标项目运行 flow-init，引导配置执行模式与基础模型；已有项目配置保持原样。")
     print(f"{prefix}重新打开 CLI 会话以加载技能和 agent。后续 git pull --ff-only 后重跑相同安装命令即可更新。")
 
 

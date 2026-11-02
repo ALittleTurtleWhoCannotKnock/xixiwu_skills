@@ -1,9 +1,9 @@
 ---
-name: to-api-contract
+name: flow-api
 description: "Extract code- and test-backed HTTP contract fragments for a just-completed backend ticket, especially projects without generated API documentation. The main session confirms scope; a contract-writer handles extraction."
 ---
 
-# To API Contract
+# Flow API
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -11,7 +11,7 @@ Extract a contract fragment from completed backend work for frontend-agent integ
 
 ## When to use
 
-- A backend ticket is finishing, usually within `/implement`.
+- A backend ticket is finishing, usually within `/flow-do`.
 - It adds or changes externally exposed HTTP endpoints.
 - A frontend agent needs the contract for integration.
 
@@ -74,4 +74,4 @@ If frontend integration finds a response/contract mismatch, report that the cont
 
 ## Related stages
 
-`/implement` triggers this for a backend endpoint ticket. Paths correspond to `/to-tickets`. Use `/diagnosing-bugs` to determine whether integration mismatches come from a stale contract or an implementation bug.
+`/flow-do` triggers this for a backend endpoint ticket. Paths correspond to `/flow-todo`. Use `/flow-debug` to determine whether integration mismatches come from a stale contract or an implementation bug.

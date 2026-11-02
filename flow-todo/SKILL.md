@@ -1,15 +1,15 @@
 ---
-name: to-tickets
+name: flow-todo
 description: "Split an approved plan or confirmed small change into independently verifiable vertical tickets with test seams, cases, engineering criteria, ownership, and dependencies. Reuse existing tickets and validation assets."
 ---
 
-# To Tickets
+# Flow Todo
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
 ## When to use
 
-- `/to-plan` produced an approved plan.
+- `/flow-plan` produced an approved plan.
 - The work exceeds a single session.
 - Collaboration needs explicit parallel or sequential work units.
 
@@ -32,11 +32,11 @@ Read the [shared contract](../_agents/workflow-contract.md) for fields, dependen
 Follow `Plan:` from the Spec/ticket to P1..Pn: local `.scratch/<feature-slug>/plan.md`, or the independent remote Plan issue body. Check approval and its user authorization; a closed issue is not approval. Reuse valid existing authorization without asking again.
 
 If the plan is missing:
-- Cross-package medium/larger work must first use `/to-plan`.
+- Cross-package medium/larger work must first use `/flow-plan`.
 - A confirmed small single-ticket change may use `Plan: none (单票小改动)` and, if no Spec exists, `Spec: none (原因)`. Put product boundaries, technical decisions, seam, and criteria in the ticket.
 - A tiny change may skip a ticket, but still needs a record below.
 
-Reuse the `/to-spec` context brief if available.
+Reuse the `/flow-spec` context brief if available.
 
 ### Records are required; artifact size is flexible
 
@@ -107,4 +107,4 @@ Update [ownership/navigation](../_agents/workflow-contract.md#归属层级与列
 
 ## Outputs and next stage
 
-Produce ticket references, including prefactoring slices, explicit dependencies, plan provenance, and execution order. After confirmation, `/implement` executes each ticket from its approved plan or the intentionally self-contained small-ticket decisions.
+Produce ticket references, including prefactoring slices, explicit dependencies, plan provenance, and execution order. After confirmation, `/flow-do` executes each ticket from its approved plan or the intentionally self-contained small-ticket decisions.

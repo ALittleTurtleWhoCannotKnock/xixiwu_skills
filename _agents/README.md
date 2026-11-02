@@ -5,7 +5,7 @@
 - 每个 `.prompt.md` 是一个执行型 agent 的完整指令
 - `workflow-contract.md` 定义共享票据字段和状态语义；主会话传给 implementer，Pi/Claude Code 生成文件时自动附带，不是独立 agent
 - `language-policy.md` 定义项目交互/产物语言；所有生成的 agent 自动附带，手动分派时传递该约定与两项语言。配置从目标仓库读取，不写死在全局 agent 中
-- `diagram-guide.md` 是功能流程图、架构图、时序图与泳道图规范，供 init、spec 等生成图示时参照，不是独立 agent
+- `diagram-guide.md` 是功能流程图、架构图、时序图与泳道图规范，供 `/flow-init`、`/flow-spec` 等生成图示时参照，不是独立 agent
 - `adapters/<tool>/` 下的文件用对应工具的 frontmatter 包装同一份 prompt
 - 改 prompt 只改这里；thinking、工具白名单等适配配置放在 adapters，基础模型由使用者接入时选择并记录在项目 execution-mode.md，适配器或单次分派读取使用
 
@@ -13,13 +13,13 @@
 
 | Prompt | 对应技能 | 类型 | 自治度 |
 |--------|---------|------|--------|
-| `exporter.prompt.md` | export-session | 格式转换 | 完全自治 |
-| `simplifier.prompt.md` | simplify | 代码清理 | 完全自治 |
-| `contract-writer.prompt.md` | to-api-contract | 契约提取 | 完全自治 |
-| `implementer.prompt.md` | implement（单张 ticket） | 实现与验证，行为改动优先 TDD | 完全自治（决策前置） |
-| `scout.prompt.md` | to-spec / to-tickets 的代码侦察 | 侦察（只读） | 完全自治 |
+| `exporter.prompt.md` | `/flow-export` | 格式转换 | 完全自治 |
+| `simplifier.prompt.md` | `/flow-simplify` | 代码清理 | 完全自治 |
+| `contract-writer.prompt.md` | `/flow-api` | 契约提取 | 完全自治 |
+| `implementer.prompt.md` | `/flow-do`（单张 ticket） | 实现与验证，行为改动优先 TDD | 完全自治（决策前置） |
+| `scout.prompt.md` | `/flow-spec` / `/flow-todo` 的代码侦察 | 侦察（只读） | 完全自治 |
 
-> `diagram-guide.md` 是图示规范（mermaid），供 init/spec 生成图时参照，**不是独立 agent**，不在 adapters 生成。
+> `diagram-guide.md` 是图示规范（mermaid），供 `/flow-init`、`/flow-spec` 生成图时参照，**不是独立 agent**，不在 adapters 生成。
 
 ## 工具支持矩阵
 

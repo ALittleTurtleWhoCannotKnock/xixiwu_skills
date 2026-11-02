@@ -1,9 +1,9 @@
 ---
-name: diagnosing-bugs
+name: flow-debug
 description: "Debug hard-to-reproduce bugs, performance regressions, and cascading failures through a reproducible feedback loop, falsifiable hypotheses, a minimal fix, and regression coverage."
 ---
 
-# Diagnosing Bugs
+# Flow Debug
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -114,5 +114,5 @@ Before finishing, verify:
 
 ## Related stages
 
-- Prevent recurrence through `/implement` and its TDD coverage.
-- If an external endpoint changes, update the affected `/to-api-contract` fragment.
+- Prevent recurrence through `/flow-do` and its TDD coverage.
+- If an external endpoint changes, update the affected `/flow-api` fragment.

@@ -1,9 +1,9 @@
 ---
-name: simplify
+name: flow-simplify
 description: "Review and clean up an explicitly scoped diff for reuse, quality, and efficiency before committing. The main session sets scope and checkpoint; a simplifier fixes clear issues without committing."
 ---
 
-# Simplify
+# Flow Simplify
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -48,7 +48,7 @@ The role prompt is the sole execution source for both modes; only the executor c
 
 ### Step 3: Human checkpoint
 
-Show the cleanup report and **wait for user confirmation** before the caller (`/implement` or the user) commits.
+Show the cleanup report and **wait for user confirmation** before the caller (`/flow-do` or the user) commits.
 
 ## Review dimensions
 
@@ -69,4 +69,4 @@ Reuse, quality, efficiency, and exclusions are defined once in `_agents/simplifi
 
 ## Related stages
 
-`/implement` invokes this at the configured commit point. The human checkpoint remains before committing. This skill reviews code quality; `/implement` also checks fidelity to the Spec and standards.
+`/flow-do` invokes this at the configured commit point. The human checkpoint remains before committing. This skill reviews code quality; `/flow-do` also checks fidelity to the Spec and standards.

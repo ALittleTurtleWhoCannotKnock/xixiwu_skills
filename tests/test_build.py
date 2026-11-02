@@ -8,6 +8,13 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+RENAMED_SKILLS = {
+    "init-dev-flow": "flow-init", "grill-with-docs": "flow-clarify",
+    "to-spec": "flow-spec", "to-plan": "flow-plan", "to-tickets": "flow-todo",
+    "implement": "flow-do", "find": "flow-status", "amend": "flow-amend",
+    "simplify": "flow-simplify", "diagnosing-bugs": "flow-debug",
+    "e2e-test": "flow-e2e", "to-api-contract": "flow-api", "export-session": "flow-export",
+}
 
 
 class BuildTests(unittest.TestCase):
@@ -218,7 +225,7 @@ class InstallTests(unittest.TestCase):
                     for name in (*self.skills, "_agents"):
                         self.assertTrue((folder / name).is_symlink(), folder / name)
                         self.assertEqual((folder / name).resolve(), self.bundle / name)
-                    self.assertEqual((folder / "to-plan/../_agents/workflow-contract.md").read_bytes(),
+                    self.assertEqual((folder / "flow-plan/../_agents/workflow-contract.md").read_bytes(),
                                      (self.bundle / "_agents/workflow-contract.md").read_bytes())
                 for tool, location in (("pi", ".pi/agent/agents"),
                                        ("claude-code", ".claude/agents")):
@@ -235,9 +242,9 @@ class InstallTests(unittest.TestCase):
         result = self.install("all")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((self.home / ".local").exists())
-        (self.bundle / "to-plan/SKILL.md").write_text("updated skill\n")
+        (self.bundle / "flow-plan/SKILL.md").write_text("updated skill\n")
         for location in self.locations.values():
-            self.assertEqual((self.home / location / "to-plan/SKILL.md").read_text(), "updated skill\n")
+            self.assertEqual((self.home / location / "flow-plan/SKILL.md").read_text(), "updated skill\n")
         updated = b"\nUpdated scout instructions.\n"
         (self.bundle / "_agents/scout.prompt.md").write_bytes(updated)
         result = self.install("all")
@@ -291,11 +298,11 @@ class InstallTests(unittest.TestCase):
                 (old / name).mkdir()
                 (old / name / "SKILL.md").write_text("old bundled skill\n")
             (old / "_agents").mkdir()
-        managed = self.home / ".cc-switch/skills/to-plan"
+        managed = self.home / ".cc-switch/skills/flow-plan"
         managed.mkdir(parents=True)
         (managed / "SKILL.md").write_text("managed skill\n")
         for folder in (".agents/skills", ".claude/skills", ".codex/skills"):
-            path = self.home / folder / "to-plan"
+            path = self.home / folder / "flow-plan"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.symlink_to(managed, target_is_directory=True)
         unrelated = self.home / ".claude/skills/user-only/SKILL.md"
@@ -305,7 +312,7 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         for old in old_bundles:
             self.assertFalse(old.exists(), old)
-        self.assertFalse((self.home / ".codex/skills/to-plan").exists())
+        self.assertFalse((self.home / ".codex/skills/flow-plan").exists())
         self.assertEqual((managed / "SKILL.md").read_text(), "managed skill\n")
         self.assertEqual(unrelated.read_text(), "user skill\n")
         self.assertEqual(len(self.backup_files()), len(old_bundles) * len(self.skills))
@@ -314,7 +321,7 @@ class InstallTests(unittest.TestCase):
         self.assertTrue(all(p.resolve() == managed for p in backup_links))
 
     def test_dry_run_and_invalid_input_leave_destinations_untouched(self):
-        old = self.home / ".claude/skills/to-plan/SKILL.md"
+        old = self.home / ".claude/skills/flow-plan/SKILL.md"
         old.parent.mkdir(parents=True)
         old.write_text("previous skill\n")
         result = self.install("all", "--dry-run")
@@ -329,6 +336,102 @@ class InstallTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(old.read_text(), "previous skill\n")
                 self.assertFalse((self.home / ".pi").exists())
+
+    def test_renamed_skills_back_up_owned_links_and_copies(self):
+        self.assertEqual(self.skills, sorted(RENAMED_SKILLS.values()))
+        previous = {}
+        managed_sources = {}
+        for location_index, location in enumerate([*self.locations.values(), ".codex/skills"]):
+            for index, (old, new) in enumerate(RENAMED_SKILLS.items()):
+                path = self.home / location / old
+                path.parent.mkdir(parents=True, exist_ok=True)
+                data = (self.bundle / new / "SKILL.md").read_bytes()
+                data = data.replace(f"name: {new}\n".encode(), f"name: {old}\n".encode(), 1)
+                for old_command, new_command in RENAMED_SKILLS.items():
+                    data = data.replace(f"/{new_command}".encode(), f"/{old_command}".encode())
+                kind = (index + location_index) % 3
+                if kind == 0:
+                    path.symlink_to(self.bundle / old, target_is_directory=True)
+                elif kind == 1:
+                    path.mkdir()
+                    (path / "SKILL.md").write_bytes(data)
+                else:
+                    managed = self.home / ".cc-switch/skills" / old
+                    managed.mkdir(parents=True, exist_ok=True)
+                    (managed / "SKILL.md").write_bytes(data)
+                    managed_sources[managed] = data
+                    path.symlink_to(managed, target_is_directory=True)
+                previous[path] = os.readlink(path) if path.is_symlink() else data
+        result = self.install("all", "--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.home / ".local").exists())
+        self.assertFalse((self.home / ".pi/agent/agents").exists())
+        for path, data in previous.items():
+            if isinstance(data, str):
+                self.assertEqual(os.readlink(path), data)
+            else:
+                self.assertEqual((path / "SKILL.md").read_bytes(), data)
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        backup_directory = self.home / ".local/share/dev-flow-skills/backups"
+        self.assertTrue(backup_directory.is_dir())
+        backups = list(backup_directory.iterdir())
+        self.assertEqual(len(backups), 1)
+        for path, data in previous.items():
+            self.assertFalse(path.exists() or path.is_symlink(), path)
+            backup = backups[0] / path.relative_to(self.home)
+            if isinstance(data, str):
+                self.assertEqual(os.readlink(backup), data)
+            else:
+                self.assertEqual((backup / "SKILL.md").read_bytes(), data)
+        for managed, data in managed_sources.items():
+            self.assertEqual((managed / "SKILL.md").read_bytes(), data)
+        for location in self.locations.values():
+            for name in self.skills:
+                self.assertEqual((self.home / location / name).resolve(), self.bundle / name)
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("安装内容已是当前版本。", result.stdout)
+        self.assertEqual(list(backups[0].parent.iterdir()), backups)
+
+    def test_bundles_with_pre_rename_names_are_retired(self):
+        bundles = []
+        for location in [*self.locations.values(), ".codex/skills"]:
+            bundle = self.home / location / "dev-flow-skills"
+            (bundle / "_agents").mkdir(parents=True)
+            for old in RENAMED_SKILLS:
+                (bundle / old).mkdir()
+                (bundle / old / "SKILL.md").write_text("previous bundled skill\n")
+            bundles.append(bundle)
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for bundle in bundles:
+            self.assertFalse(bundle.exists(), bundle)
+        self.assertEqual(len(self.backup_files()), len(bundles) * len(RENAMED_SKILLS))
+
+    def test_rename_respects_target_selection_and_unrelated_same_names(self):
+        for target in [*self.locations, "all"]:
+            with self.subTest(target=target):
+                home = self.root / target
+                unrelated = home / "personal skill"
+                unrelated.mkdir(parents=True)
+                data = b"---\nname: find\ndescription: Personal file search.\n---\n\nMy instructions.\n"
+                (unrelated / "SKILL.md").write_bytes(data)
+                for location in [*self.locations.values(), ".codex/skills"]:
+                    directory = home / location
+                    directory.mkdir(parents=True)
+                    (directory / "to-plan").symlink_to(self.bundle / "to-plan", target_is_directory=True)
+                    (directory / "find").symlink_to(unrelated, target_is_directory=True)
+                result = self.install(target, home=home)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                for tool, location in {**self.locations, "legacy-codex": ".codex/skills"}.items():
+                    old = home / location / "to-plan"
+                    selected = target == "all" or target == tool or (target == "codex" and tool == "legacy-codex")
+                    self.assertEqual(old.is_symlink(), not selected, old)
+                    personal = home / location / "find"
+                    self.assertTrue(personal.is_symlink(), personal)
+                    self.assertEqual((personal / "SKILL.md").read_bytes(), data)
+                self.assertEqual((unrelated / "SKILL.md").read_bytes(), data)
 
     def test_invalid_existing_agent_is_reported_before_any_installation(self):
         path = self.home / ".claude/agents/scout.md"
@@ -362,17 +465,17 @@ class InstallTests(unittest.TestCase):
                 self.home = self.root / location.replace("/", "-")
                 self.bundle = self.home / location
                 shutil.copytree(original, self.bundle)
-                before = (self.bundle / "to-plan/SKILL.md").read_bytes()
+                before = (self.bundle / "flow-plan/SKILL.md").read_bytes()
                 result = self.install(target)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("独立目录", result.stderr)
-                self.assertEqual((self.bundle / "to-plan/SKILL.md").read_bytes(), before)
+                self.assertEqual((self.bundle / "flow-plan/SKILL.md").read_bytes(), before)
                 self.assertFalse((self.home / ".local").exists())
 
     def test_linked_parent_directory_is_not_modified(self):
         managed = self.root / "managed skills"
-        (managed / "to-plan").mkdir(parents=True)
-        original = managed / "to-plan/SKILL.md"
+        (managed / "flow-plan").mkdir(parents=True)
+        original = managed / "flow-plan/SKILL.md"
         original.write_text("managed skill\n")
         path = self.home / ".claude/skills"
         path.parent.mkdir(parents=True)
@@ -389,7 +492,7 @@ class InstallTests(unittest.TestCase):
         backup_directory.parent.mkdir(parents=True)
         backup_directory.symlink_to(self.bundle, target_is_directory=True)
         before = set(self.bundle.iterdir())
-        old = self.home / ".claude/skills/to-plan/SKILL.md"
+        old = self.home / ".claude/skills/flow-plan/SKILL.md"
         old.parent.mkdir(parents=True)
         old.write_text("previous skill\n")
         result = self.install("all")

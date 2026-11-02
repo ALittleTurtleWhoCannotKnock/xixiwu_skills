@@ -1,9 +1,9 @@
 ---
-name: init-dev-flow
+name: flow-init
 description: "Initialize or complete repository workflow setup: discover the tracker, confirm commit strategy, execution mode/base model, and interaction/artifact languages. Preserve existing choices and fill only missing settings."
 ---
 
-# Init Dev Flow
+# Flow Init
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -126,10 +126,10 @@ Issues and specs for this repo live as markdown files in `.scratch/`.
 - `.scratch/<feature-slug>/INDEX.md` is the feature navigation entry: current Spec, Plan, linked ticket hierarchy, and version history; create it when the first Spec or ticket is saved
 - Keep `.scratch/README.md` linked to each feature INDEX; preserve existing explanations and history
 - Use Parent: for direct ownership (Spec → Plan → Tickets; existing Epic optional); file references in metadata are relative to the feature directory
-- INDEX links point to real files and do not duplicate ticket statuses or approval state; `/find` reads those from the source files
+- INDEX links point to real files and do not duplicate ticket statuses or approval state; `/flow-status` reads those from the source files
 - Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, never a single combined tickets file
 - Every ticket follows the fields and states declared in Ticket conventions below
-- API contracts produced by `/to-api-contract` live at `.scratch/<feature-slug>/contracts/<ticket-slug>.md`
+- API contracts produced by `/flow-api` live at `.scratch/<feature-slug>/contracts/<ticket-slug>.md`
 - Small changes that skip spec/plan/ticket leave a record in `.scratch/<feature-slug>/changelog.md` (or an in-place edit to an existing spec/plan/ticket)
 - The project architecture diagram (when generated) is `.scratch/architecture.md`
 - Triage state is recorded as a `Status:` line near the top of each issue file
@@ -160,7 +160,7 @@ Issues and specs for this repo live in GitHub Issues on the connected remote. Us
 - 先探测当前 CLI 的层级能力，必要时用 gh api；父级冲突不强制替换，规格版本迁移按共享约定核对
 - Ticket 分别填写 Spec: 和 Plan:，后者格式为 <Plan issue 引用> / P<N>
 - Plan 正文记录待 review / 已批准状态；open/closed 不是批准状态
-- amend 更新同一 Plan issue 正文及 Spec: 引用，不创建 plan-vN；Spec 版本定位沿用团队 tracker 约定
+- /flow-amend 更新同一 Plan issue 正文及 Spec: 引用，不创建 plan-vN；Spec 版本定位沿用团队 tracker 约定
 - 远程 issue 是主存，不额外维护本地 plan.md 副本
 
 ## Optional Project
@@ -232,7 +232,7 @@ Root instructions hold pointers, not copied language values or structural rules.
 
 ### Step 3d: Confirm commit strategy
 
-This determines commit timing in `/implement` and cleanup timing in `/simplify`. Inspect `git log --oneline -20`: many small scoped commits suggest per-ticket; larger combined changes suggest squash. Reuse an explicit choice; otherwise confirm the suggestion:
+This determines commit timing in `/flow-do` and cleanup timing in `/flow-simplify`. Inspect `git log --oneline -20`: many small scoped commits suggest per-ticket; larger combined changes suggest squash. Reuse an explicit choice; otherwise confirm the suggestion:
 
 ```
 根据 git 历史，推测你的提交习惯是：<推测结果>
@@ -251,9 +251,9 @@ Save `docs/agents/commit-strategy.md` using the chosen template.
 
 每张 ticket 通过工程检查和审查后自动 resolved/关闭，再独立处理提交 checkpoint；人工功能验收留在 Plan/Spec，经用户明确授权才提交。
 
-- `/implement` 每票验证后更新状态与依赖，再独立处理该票的收尾和提交
-- `/simplify` 在每张 ticket 提交前触发，scope = 该 ticket 的未提交 diff
-- `/simplify` 修复后留人工 checkpoint，用户确认后才提交
+- `/flow-do` 每票验证后更新状态与依赖，再独立处理该票的收尾和提交
+- `/flow-simplify` 在每张 ticket 提交前触发，scope = 该 ticket 的未提交 diff
+- `/flow-simplify` 修复后留人工 checkpoint，用户确认后才提交
 ```
 
 **squash:**
@@ -263,9 +263,9 @@ Save `docs/agents/commit-strategy.md` using the chosen template.
 
 整个 feature 的执行票自动 resolved/关闭后统一处理提交，经用户明确授权才提交；Plan/Spec 另行记录功能验收，不因票全关自动通过。
 
-- `/implement` 每票工程验证和审查通过后 resolved/关闭并更新依赖，可继续下游票；不等待 Git 提交或人工功能验收
-- `/simplify` 在统一提交前触发，scope = feature 起点到工作区的累计 diff
-- `/simplify` 修复后留人工 checkpoint，用户确认后才提交
+- `/flow-do` 每票工程验证和审查通过后 resolved/关闭并更新依赖，可继续下游票；不等待 Git 提交或人工功能验收
+- `/flow-simplify` 在统一提交前触发，scope = feature 起点到工作区的累计 diff
+- `/flow-simplify` 修复后留人工 checkpoint，用户确认后才提交
 ```
 
 This file is authoritative; implementation and simplification read it rather than hard-coding timing.
@@ -302,10 +302,10 @@ Inline mode uses the main-session model and needs no separate child base model.
 
 **基础模型**: <用户确认的模型 ID 或 inherit>
 
-- `/implement` 的实现与验证 → `implementer` 子 agent
-- `/simplify` → `simplifier` 子 agent
-- `/to-api-contract` → `contract-writer` 子 agent
-- `/export-session` → `exporter` 子 agent
+- `/flow-do` 的实现与验证 → `implementer` 子 agent
+- `/flow-simplify` → `simplifier` 子 agent
+- `/flow-api` → `contract-writer` 子 agent
+- `/flow-export` → `exporter` 子 agent
 
 子 agent 定义见 `_agents/*.prompt.md`，各工具经 `adapters/` 注册。
 Pi agent 的 thinking 分级由 build.sh 控制；使用 `build.sh --project-root <目标仓库>` 读取本项目的基础模型并生成 agent 配置。其他工具分派时按各自支持的格式应用此字段；`inherit` 使用工具的原生继承方式。
@@ -342,7 +342,7 @@ Show the actual changed files and key content. Do not copy conditional architect
 初始化完成（本地模式 + squash 提交 + 派子 agent）：
 
 ✅ docs/agents/issue-tracker.md   — tracker 类型声明（单一事实源）
-✅ docs/agents/commit-strategy.md — 提交策略（simplify 触发时机）
+✅ docs/agents/commit-strategy.md — 提交策略（/flow-simplify 触发时机）
 ✅ docs/agents/execution-mode.md  — 执行模式 + 用户确认的基础模型（subagent 模式）
 ✅ docs/agents/language.md        — 用户确认的交互语言与业务产物语言
 ✅ .scratch/README.md             — 本地 tracker 说明
@@ -362,6 +362,6 @@ All modes produce `docs/agents/issue-tracker.md`, commit-strategy.md, execution-
 
 Use for first setup, missing language/base-model preferences, or onboarding. A complete project with no update request should simply reuse declarations. A temporary single task need not initialize the whole workflow.
 
-Publishing skills read issue-tracker.md; `/implement` and `/simplify` read commit-strategy.md; `/export-session` uses tracker conventions for issue inference. All skills resolve language.md and pass effective languages plus the target repository to delegates. Source-instruction language does not choose output language. A missing tracker declaration requests `/init-dev-flow`.
+Publishing skills read issue-tracker.md; `/flow-do` and `/flow-simplify` read commit-strategy.md; `/flow-export` uses tracker conventions for issue inference. All skills resolve language.md and pass effective languages plus the target repository to delegates. Source-instruction language does not choose output language. A missing tracker declaration requests `/flow-init`.
 
-Every change needs a traceable Spec/plan/ticket/changelog record, but artifacts scale with the change. Small work does not require a full ticket/plan/Spec; changelog is the fallback. See `/to-tickets` for the record rule.
+Every change needs a traceable Spec/plan/ticket/changelog record, but artifacts scale with the change. Small work does not require a full ticket/plan/Spec; changelog is the fallback. See `/flow-todo` for the record rule.

@@ -1,9 +1,9 @@
 ---
-name: e2e-test
+name: flow-e2e
 description: "Manually create maintained browser E2E coverage for a feature. Discover and reuse the project framework, fixtures, and CI conventions; require stable selectors, deterministic waits, and local headless success."
 ---
 
-# E2E Test
+# Flow E2E
 
 Follow the target project's interaction and artifact languages from [language policy](../_agents/language-policy.md); pass both to delegates.
 
@@ -93,7 +93,7 @@ Application bugs belong to a separately authorized repair flow. Confirm new fram
 
 ## Related stages
 
-- Manually triggered for maintained browser coverage. `/implement` may run required existing E2E tests or temporary browser checks, without creating a suite for every ticket.
+- Manually triggered for maintained browser coverage. `/flow-do` may run required existing E2E tests or temporary browser checks, without creating a suite for every ticket.
 - Scout may discover test/CI files in Step 1.
 - An implementer may write tests in Step 3 under execution-mode and its minimal-change/validation rules.
-- Repair discovered product bugs through `/diagnosing-bugs` or `/implement` when authorized.
+- Repair discovered product bugs through `/flow-debug` or `/flow-do` when authorized.
