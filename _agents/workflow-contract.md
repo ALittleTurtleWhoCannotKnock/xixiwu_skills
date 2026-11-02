@@ -21,7 +21,11 @@ Read the tracker declaration. Each artifact has one current authoritative store:
 |----------|---------------|----------------------|
 | Spec | `.scratch/<feature>/spec.md` or version file | Spec issue under the declared version convention |
 | Plan | `.scratch/<feature>/plan.md` | Independent Plan issue, current approach in its body |
-| Ticket | `.scratch/<feature>/issues/<NN>-<slug>.md` | One independent issue each |
+| Todo | `.scratch/<feature>/issues/<NN>-<slug>.md` | One independent issue each |
+
+Execution artifacts are **Todos (待办)**. Use `Todo`/`Todos` in new titles, document headings, Plan lists, INDEX navigation, and status reports. Internal references to a “ticket” mean this same artifact; existing paths, protocol fields, state values, and `per-ticket` configuration remain unchanged.
+
+Legacy `[Ticket]` titles, `ticket` type labels, and Ticket-based tracker examples remain readable aliases, not the naming for new Todos. Match existing work by provenance and scope, including both `todo` and legacy `ticket` results when filtering by type and deduplicating by issue identity. Reuse matching items without bulk-renaming/relabeling history or recreating issues to adopt the new name.
 
 - Remote Plan titles may use `[Plan] <Feature> 实施蓝图`. Its `Spec:` identifies the current execution Spec; the Spec backlinks `Plan:`, and the Plan lists tickets. Query existing references and update the same Plan rather than duplicating it.
 - Tickets separate Spec version from Plan package. Local example: `Plan: plan.md#P2`; remote: `Plan: #101 / P2`, with full URLs across repositories. P2 is a logical body package, not a platform-generated Markdown anchor.
@@ -35,13 +39,13 @@ Optional Spec HTML is a derived reading snapshot; `/flow-spec` asks per invocati
 <a name="归属层级与列表展示"></a>
 ## Ownership and navigation
 
-Default hierarchy: **Spec → Plan → Tickets**. Link an explicitly identified Epic above the Spec, without manufacturing an extra parent. Parent identifies direct ownership, Spec the exact version, Plan the approach/package, and Blocked by execution dependencies; they are distinct.
+Default hierarchy: **Spec → Plan → Todos**. Link an explicitly identified Epic above the Spec, without manufacturing an extra parent. Parent identifies direct ownership, Spec the exact version, Plan the approach/package, and Blocked by execution dependencies; they are distinct.
 
 | Artifact | Parent reference |
 |----------|------------------|
 | Spec | Explicit user/tracker Epic, otherwise none |
 | Plan | Current Spec file/issue |
-| Ticket | Plan file/issue without P<N>; if omitted, use Spec, then an explicitly given Epic, otherwise `none (单票小改动)` |
+| Todo | Plan file/issue without P<N>; if omitted, use Spec, then an explicitly given Epic, otherwise `none (单票小改动)` |
 
 Infer missing legacy Parent only from explicit Plan/Spec and label the inference, never from similar titles/numbers/directories. Fill ownership in touched artifacts rather than bulk-rewriting history. A historical ticket continued by a new version is not its ownership parent.
 
@@ -63,8 +67,8 @@ Plan: [plan.md](plan.md)
 ## 层级
 - [Spec v2](spec-v2.md)（当前）
   - [Plan](plan.md)
-    - [04 JSON 导出](issues/04-json.md) — P2 / Spec v2
-    - [01 CSV 导出](issues/01-csv.md) — P1 / Spec v1（历史）
+    - [Todo 04 JSON 导出](issues/04-json.md) — P2 / Spec v2
+    - [Todo 01 CSV 导出](issues/01-csv.md) — P1 / Spec v1（历史）
 
 ## 演进
 - [v1](spec.md)：CSV 导出
@@ -74,7 +78,7 @@ Plan: [plan.md](plan.md)
 ### GitHub
 
 - Create/verify native parent/sub-issue relationships matching Parent. Reuse the same parent and issue on retries. Retain body references; Markdown backlinks alone are not native synchronization.
-- Reuse project type labels, otherwise spec/plan/ticket (Epic only when it exists). Titles use `[Spec]`, `[Plan]`, `[Ticket]`. Create needed missing labels when permitted; otherwise retain title classification and report unsynchronized labels, without recreating issues.
+- Titles use `[Spec]`, `[Plan]`, `[Todo]`; type-label defaults are `spec`, `plan`, `todo` (Epic only when it exists). Reuse explicitly configured equivalent type labels, except legacy `ticket` is only a compatibility alias for existing work. Create needed missing labels when permitted; otherwise retain title classification and report unsynchronized labels, without recreating issues.
 - Inspect actual CLI create/edit/view help. If hierarchy flags are absent, use gh api or an available connector for the [Sub-issues API](https://docs.github.com/en/rest/issues/sub-issues). `sub_issue_id` is the actual numeric issue **id**, not its issue number.
 - Read the child parent and destination child list before adding. Authentication errors, 403, or unexplained 404 are not no-parent evidence. Do not force-replace a foreign parent; report expected/actual. Only the verified same-feature Spec migration below may reparent. After a failed write, read actual results and report the unsynchronized relationship/cause; do not loop or duplicate issues.
 - Projects is optional. Use the specified/configured Project; otherwise do not create one or block ordinary Issues work. Table **View → Show hierarchy** can show Parent issue/Sub-issue progress. Repository Issues remains the classification/filtering view; do not promise the same tree. See [hierarchy view](https://github.blog/changelog/2026-03-19-hierarchy-view-in-github-projects-is-now-generally-available/).
@@ -89,12 +93,12 @@ If Spec versions share one issue, native Plan parenting is unchanged. If a versi
 Tree shape, child-close ratios, and folder layout prove neither approach approval nor functional acceptance. Do not close parents, promote state, or release dependencies on that basis. `/flow-status` reports actual version/state/relationship conflicts without repairing them.
 
 <a name="ticket-字段"></a>
-## Ticket fields
+## Todo fields
 
 One file/issue per ticket. Minimal template:
 
 ```markdown
-## Ticket 02: 评论数据模型与基础 API
+## [Todo] 02: 评论数据模型与基础 API
 Status: ready
 Parent: plan.md
 Spec: spec.md

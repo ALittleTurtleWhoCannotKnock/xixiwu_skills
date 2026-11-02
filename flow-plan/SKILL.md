@@ -121,7 +121,7 @@ Focus the review summary on what affects approval, referencing the relevant entr
 - Approach approval permits implementation only. Keep `Acceptance` awaiting actual user functional acceptance; closed tickets or permission to commit do not make it accepted.
 - Preserve existing acceptance state and confirmation records. Reset to pending under /flow-amend rules only when confirmed functional/acceptance scope changes, not because the skill reran or its template was reapplied.
 - Hand `/flow-todo`, `/flow-do`, and `/flow-status` the actual plan file/issue reference, not only the Spec or a discussion comment.
-- Backlink tickets into the plan and update the local INDEX or native sub-issue list. `/flow-amend` maintains the same body; comments hold discussion and change records only.
+- Backlink tickets under a Todos list in the plan and update the local INDEX or native sub-issue list using the shared Todo naming. `/flow-amend` maintains the same body; comments hold discussion and change records only.
 
 ## What belongs in the plan
 

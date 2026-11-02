@@ -29,7 +29,7 @@ Extract a contract fragment from completed backend work for frontend-agent integ
 Read the ticket criteria and list the endpoints it added or changed. Example:
 
 ```
-本 ticket 涉及的端点：
+本待办涉及的端点：
 - POST /posts/:id/comments（新增）
 - GET /posts/:id/comments（新增）
 ```

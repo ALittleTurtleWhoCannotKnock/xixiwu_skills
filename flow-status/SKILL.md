@@ -84,7 +84,7 @@ Explicit none/reason with complete small-ticket decisions is valid. Plan approva
 
 ### Step 5: Report
 
-First emit **Hierarchy** as clickable nested Markdown: explicitly identified Epic → Spec → Plan → tickets. Link actual local files or issue URLs; label package, Spec version, actual Status, and historical tickets. Omit intentionally absent levels. P<N> is grouping, not an extra issue. Mark inferred/unsynchronized native relationships as such rather than presenting an unverified tree as fact.
+First emit **Hierarchy** as clickable nested Markdown: explicitly identified Epic → Spec → Plan → Todos. Use Todo names for report groups while preserving actual linked titles, including legacy Ticket items. Discover both `todo` and legacy `ticket` types under the shared contract. Link actual local files or issue URLs; label package, Spec version, actual Status, and historical tickets. Omit intentionally absent levels. P<N> is grouping, not an extra issue. Mark inferred/unsynchronized native relationships as such rather than presenting an unverified tree as fact.
 
 Then report separate categories/current-versus-history counts. Native child-close percentages do not replace engineering or acceptance state. Snapshot example:
 
@@ -99,7 +99,7 @@ Closure sync: <本地 resolved 即关闭；或远程 closed / 关闭未同步 / 
 
 Progress: <n> resolved / <n> code-complete / <n> parked / <n> active / <n> unknown（共 <total>）
 
-Tickets（按归类排序）:
+Todos（待办，按归类排序）:
 - [resolved] 01: <title>
 - [code-complete] 19: <title>  ← legacy intermediate state
 - [parked] 22: <title>  ← 外部依赖未到位
@@ -115,9 +115,9 @@ Contracts:
 - <ticket-contract-file>
 
 Next:
-- <执行层中依赖已解除且引用方案已批准的唯一可执行 ready ticket；明确省略 plan 时按简化规则>
+- <执行层中依赖已解除且引用方案已批准的唯一可执行 ready Todo；明确省略 plan 时按简化规则>
 - 老版本遗留的 ready 照列但标注其外部阻塞，不冒充“立即能做”
-- 没有可执行 ticket 时明确说明原因
+- 没有可执行 Todo 时明确说明原因
 
 Warnings:
 - <missing INDEX / unknown Status / multiple claimed / tracker unavailable

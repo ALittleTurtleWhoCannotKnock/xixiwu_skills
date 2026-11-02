@@ -16,7 +16,7 @@
 | `exporter.prompt.md` | `/flow-export` | 格式转换 | 完全自治 |
 | `simplifier.prompt.md` | `/flow-simplify` | 代码清理 | 完全自治 |
 | `contract-writer.prompt.md` | `/flow-api` | 契约提取 | 完全自治 |
-| `implementer.prompt.md` | `/flow-do`（单张 ticket） | 实现与验证，行为改动优先 TDD | 完全自治（决策前置） |
+| `implementer.prompt.md` | `/flow-do`（单张待办） | 实现与验证，行为改动优先 TDD | 完全自治（决策前置） |
 | `scout.prompt.md` | `/flow-spec` / `/flow-todo` 的代码侦察 | 侦察（只读） | 完全自治 |
 
 > `diagram-guide.md` 是图示规范（mermaid），供 `/flow-init`、`/flow-spec` 生成图时参照，**不是独立 agent**，不在 adapters 生成。

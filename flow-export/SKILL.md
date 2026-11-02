@@ -86,8 +86,8 @@ Present the inferred binding for confirmation. Example:
 我检测到本会话可能关联以下 issue：
 
 - spec: blog-comments（推断自 .scratch/blog-comments/spec.md）
-  - ticket: 01-comment-model
-  - ticket: 02-nested-replies
+  - todo: 01-comment-model
+  - todo: 02-nested-replies
 
 建议绑定: blog-comments
 

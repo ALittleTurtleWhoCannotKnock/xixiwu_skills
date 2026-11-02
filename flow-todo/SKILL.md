@@ -42,10 +42,10 @@ Reuse the `/flow-spec` context brief if available.
 
 Every change needs a traceable record, without forcing all three artifacts:
 
-| Size | Spec | Plan | Ticket | Minimum |
+| Size | Spec | Plan | Todo | Minimum |
 |------|------|------|--------|---------|
-| Large | Required | Required | Required | Ticket |
-| Medium | May omit | May omit | Required | Ticket |
+| Large | Required | Required | Required | Todo |
+| Medium | May omit | May omit | Required | Todo |
 | Small | May omit | May omit | May omit | A record |
 | Tiny | May omit | May omit | May omit | A record |
 
@@ -61,14 +61,14 @@ Before splitting tickets, consider whether the current structure makes the chang
 场景：给博客加评论功能
 
 无 prefactoring：
-- Ticket 1: 在 Post 模型里加 comments 字段
-- Ticket 2: 在 Post API 里加评论接口
+- Todo 1: 在 Post 模型里加 comments 字段
+- Todo 2: 在 Post API 里加评论接口
 - 结果：Post 越来越臃肿
 
 有 prefactoring（prefactor 票排在最前，同样从 01 编号）：
-- Ticket 1: Prefactor - 提取 Content 接口
-- Ticket 2: Comment 模型实现 Content 接口
-- Ticket 3: 评论 API
+- Todo 1: Prefactor - 提取 Content 接口
+- Todo 2: Comment 模型实现 Content 接口
+- Todo 3: 评论 API
 - 结果：评论独立，不影响文章
 ```
 
@@ -96,13 +96,15 @@ Read `docs/agents/issue-tracker.md`; if absent, request initialization. Follow i
 
 First inspect the Plan's ticket list and existing tickets. Match by **Spec version + Plan/P<N> + confirmed execution scope and criteria**. Reuse matching tickets and create only missing slices. One existing ticket does not exhaust a 1:N package, and historical tickets from an older Spec do not substitute for new work or get reopened merely by rerunning ticketing.
 
+Apply the shared Todo naming even when an old tracker example says Ticket. Include legacy `[Ticket]`/`ticket` items in discovery and reuse; a naming difference is not a missing slice.
+
 Every ticket needs `Status:`, initially `ready`. Read the allowed values/dependency semantics from the tracker, not a hard-coded three-state assumption.
 
-Locally use one `.scratch/<feature-slug>/issues/<NN>-<slug>.md` per ticket, numbered from `01` with blockers first. **Never merge all tickets into one file.** Remotely use one issue each with the same fields and declared semantics. Native blocking relationships, when used, must agree with `Blocked by:`; report unsupported synchronization instead of implying it succeeded.
+Locally use one `.scratch/<feature-slug>/issues/<NN>-<slug>.md` per ticket, numbered from `01` with blockers first and a `[Todo]` title. **Never merge all tickets into one file.** Remotely use one issue each with the same fields and declared semantics. Native blocking relationships, when used, must agree with `Blocked by:`; report unsupported synchronization instead of implying it succeeded.
 
 Update [ownership/navigation](../_agents/workflow-contract.md#归属层级与列表展示):
-- **Local:** Add real links, P<N>, and Spec versions to INDEX, backlink tickets in the Plan, and maintain `.scratch/README.md`. Even a small ticket without Spec/Plan gets an index containing only actual artifacts. Do not copy Status or approval state into navigation.
-- **GitHub:** Use `[Ticket]` and the relevant type label. Establish/verify the Plan or explicit fallback parent; reuse the same relationship, reporting conflicts/failures. Add to the specified Project only; its absence does not require another tracker.
+- **Local:** Use Todo names in INDEX and the Plan's linked list, add real links, P<N>, and Spec versions, and maintain `.scratch/README.md`. Even a small ticket without Spec/Plan gets an index containing only actual artifacts. Do not copy Status or approval state into navigation.
+- **GitHub:** New issues use `[Todo]` and the `todo` type label (or an explicitly configured equivalent under the shared rules). Establish/verify the Plan or explicit fallback parent; reuse the same relationship, reporting conflicts/failures. Add to the specified Project only; its absence does not require another tracker.
 - Backlink remote tickets in the Plan body, never append current ticket/plan bodies to Spec comments.
 
 ## Outputs and next stage

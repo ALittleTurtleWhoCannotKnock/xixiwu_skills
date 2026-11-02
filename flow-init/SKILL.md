@@ -95,15 +95,16 @@ The templates retain fixed structure and protocol fields. Localize document pros
 Read the [shared contract](../_agents/workflow-contract.md). Include the common state/field conventions below and the mode-specific ownership/navigation rules.
 
 ```markdown
-## Ticket conventions
+## Todo conventions
 
+- 执行待办统一称为 Todo，新标题使用 [Todo]；旧 [Ticket] / ticket 标签仅供兼容识别和复用，不批量改写历史条目
 - Status values: ready / claimed / resolved / parked
 - ready = 待执行；claimed = 执行中或必要自动检查未通过
 - resolved = 本票实现、必要工程检查、审查和必需产物通过，自动关闭并解除票级依赖；parked = 搁置，不解除依赖
 - 人工功能验收集中到 Plan（无 Plan 时 Spec），使用 Acceptance: pending / accepted / changes-requested；票级关闭不等待该确认
 - 远程票同步实际 close 并复读状态；失败如实报告“工程完成 / 平台关闭未同步”，不谎报关闭成功
 - 每票使用 Status:、Parent:、Spec:、Plan:、Blocked by:；直接归属、spec 版本、plan 包和执行依赖分别记录
-- 小改动省略 spec/plan 时写 none (原因)，必要决策和测试边界记录在 ticket 中
+- 小改动省略 spec/plan 时写 none (原因)，必要决策和测试边界记录在 Todo 中
 - Git 提交、票级完成和功能验收分别记录；未获用户明确授权不得提交/推送，暂不提交不阻止票级关闭
 ```
 
@@ -116,21 +117,21 @@ When adopting the new closure flow in an existing tracker, update only relevant 
 
 Issues and specs for this repo live as markdown files in `.scratch/`.
 
-**`.scratch/` is committed to the repo and shared with the whole team.** Tickets and specs go through the same pull/review flow as code. Pull before creating new ticket files to avoid numbering collisions; if two branches both take `NN`, the later one renumbers on merge.
+**`.scratch/` is committed to the repo and shared with the whole team.** Todos and specs go through the same pull/review flow as code. Pull before creating new Todo files to avoid numbering collisions; if two branches both take `NN`, the later one renumbers on merge.
 
 ## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`
 - The spec is `.scratch/<feature-slug>/spec.md`
 - The implementation plan (when produced) is `.scratch/<feature-slug>/plan.md`
-- `.scratch/<feature-slug>/INDEX.md` is the feature navigation entry: current Spec, Plan, linked ticket hierarchy, and version history; create it when the first Spec or ticket is saved
+- `.scratch/<feature-slug>/INDEX.md` is the feature navigation entry: current Spec, Plan, linked Todo hierarchy, and version history; create it when the first Spec or Todo is saved
 - Keep `.scratch/README.md` linked to each feature INDEX; preserve existing explanations and history
-- Use Parent: for direct ownership (Spec → Plan → Tickets; existing Epic optional); file references in metadata are relative to the feature directory
-- INDEX links point to real files and do not duplicate ticket statuses or approval state; `/flow-status` reads those from the source files
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, never a single combined tickets file
-- Every ticket follows the fields and states declared in Ticket conventions below
+- Use Parent: for direct ownership (Spec → Plan → Todos; existing Epic optional); file references in metadata are relative to the feature directory
+- INDEX links point to real files and do not duplicate Todo statuses or approval state; `/flow-status` reads those from the source files
+- Todos are one file each at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, with a [Todo] title; never combine them into a single file
+- Every Todo follows the fields and states declared in Todo conventions below
 - API contracts produced by `/flow-api` live at `.scratch/<feature-slug>/contracts/<ticket-slug>.md`
-- Small changes that skip spec/plan/ticket leave a record in `.scratch/<feature-slug>/changelog.md` (or an in-place edit to an existing spec/plan/ticket)
+- Small changes that skip Spec/Plan/Todo leave a record in `.scratch/<feature-slug>/changelog.md` (or an in-place edit to an existing Spec/Plan/Todo)
 - The project architecture diagram (when generated) is `.scratch/architecture.md`
 - Triage state is recorded as a `Status:` line near the top of each issue file
 - Comments and conversation history append to the bottom of the file under a `## Comments` heading
@@ -139,7 +140,7 @@ Issues and specs for this repo live as markdown files in `.scratch/`.
 
 Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).
 
-## When a skill says "fetch the relevant ticket"
+## When a skill says "fetch the relevant Todo"
 
 Read the file at the referenced path. The user will normally pass the path or the issue number directly.
 ```
@@ -153,12 +154,12 @@ Issues and specs for this repo live in GitHub Issues on the connected remote. Us
 
 ## Artifact conventions
 
-- Spec、Plan、Ticket 分别使用独立 issue；Plan issue 正文是现行技术方案，评论只记录讨论、批准依据和变更原因
-- Spec 正文用 Plan: 引用 Plan issue；Plan 正文用 Spec: 指向当前执行版 Spec，列出关联 tickets
-- Parent: 记录直接归属，并同步原生 Spec → Plan → Tickets；已有 Epic 时作为 Spec 父级，不额外强制建单
-- 沿用项目类型标签，未约定时用 spec / plan / ticket，并采用 [Spec] / [Plan] / [Ticket] 标题前缀；标签或原生关系失败时如实报告，不重复创建 issue
+- Spec、Plan、Todo 分别使用独立 issue；Plan issue 正文是现行技术方案，评论只记录讨论、批准依据和变更原因
+- Spec 正文用 Plan: 引用 Plan issue；Plan 正文用 Spec: 指向当前执行版 Spec，列出关联 Todos
+- Parent: 记录直接归属，并同步原生 Spec → Plan → Todos；已有 Epic 时作为 Spec 父级，不额外强制建单
+- 新标题使用 [Spec] / [Plan] / [Todo]，类型标签默认 spec / plan / todo；可沿用明确配置的等价标签，旧 ticket 仅作历史兼容，不用于新待办；标签或原生关系失败时如实报告，不重复创建 issue
 - 先探测当前 CLI 的层级能力，必要时用 gh api；父级冲突不强制替换，规格版本迁移按共享约定核对
-- Ticket 分别填写 Spec: 和 Plan:，后者格式为 <Plan issue 引用> / P<N>
+- Todo 分别填写 Spec: 和 Plan:，后者格式为 <Plan issue 引用> / P<N>
 - Plan 正文记录待 review / 已批准状态；open/closed 不是批准状态
 - /flow-amend 更新同一 Plan issue 正文及 Spec: 引用，不创建 plan-vN；Spec 版本定位沿用团队 tracker 约定
 - 远程 issue 是主存，不额外维护本地 plan.md 副本
@@ -173,7 +174,7 @@ Project: none
 
 Create a GitHub issue with `gh issue create`.
 
-## When a skill says "fetch the relevant ticket"
+## When a skill says "fetch the relevant Todo"
 
 Use `gh issue view <number>`.
 ```
@@ -185,7 +186,7 @@ For GitLab, retain separate artifacts, fields, and state semantics, using glab a
 ```markdown
 # .scratch/
 
-本目录是仓库的本地 issue tracker：specs 与 tickets 以 markdown 形式存放，**随仓库提交、团队共享**。
+本目录是仓库的本地 issue tracker：Spec 与 Todo 以 markdown 形式存放，**随仓库提交、团队共享**。
 
 约定见 `docs/agents/issue-tracker.md`。
 
@@ -238,7 +239,7 @@ This determines commit timing in `/flow-do` and cleanup timing in `/flow-simplif
 根据 git 历史，推测你的提交习惯是：<推测结果>
 
 你的习惯是？
-A. 每张 ticket 完成后立即提交（per-ticket）
+A. 每张待办完成后立即提交（per-ticket）
 B. 整个 feature 完成后统一提交（squash）
 ```
 
@@ -249,10 +250,10 @@ Save `docs/agents/commit-strategy.md` using the chosen template.
 ```markdown
 # Commit strategy: per-ticket
 
-每张 ticket 通过工程检查和审查后自动 resolved/关闭，再独立处理提交 checkpoint；人工功能验收留在 Plan/Spec，经用户明确授权才提交。
+每张待办通过工程检查和审查后自动 resolved/关闭，再独立处理提交 checkpoint；人工功能验收留在 Plan/Spec，经用户明确授权才提交。
 
 - `/flow-do` 每票验证后更新状态与依赖，再独立处理该票的收尾和提交
-- `/flow-simplify` 在每张 ticket 提交前触发，scope = 该 ticket 的未提交 diff
+- `/flow-simplify` 在每张待办提交前触发，scope = 该待办的未提交 diff
 - `/flow-simplify` 修复后留人工 checkpoint，用户确认后才提交
 ```
 
@@ -310,7 +311,7 @@ Inline mode uses the main-session model and needs no separate child base model.
 子 agent 定义见 `_agents/*.prompt.md`，各工具经 `adapters/` 注册。
 Pi agent 的 thinking 分级由 build.sh 控制；使用 `build.sh --project-root <目标仓库>` 读取本项目的基础模型并生成 agent 配置。其他工具分派时按各自支持的格式应用此字段；`inherit` 使用工具的原生继承方式。
 
-**单次覆盖：** 用户可在单次执行时改为主会话直接做（如"这张小 ticket 别派了"）。
+**单次覆盖：** 用户可在单次执行时改为主会话直接做（如"这张小待办别派了"）。
 **模型覆盖：** Pi 构建时可用 `DEV_FLOW_MODEL` 临时覆盖本项目选择；不提供固定默认模型。
 ```
 
@@ -323,7 +324,7 @@ Pi agent 的 thinking 分级由 build.sh 控制；使用 `build.sh --project-roo
 
 - 各技能的执行逻辑（实现与验证、清理维度、契约模板、导出规则）写在对应 `_agents/*.prompt.md` 里，主会话直接参照执行。
 
-**单次覆盖：** 用户可在单次执行时改为派子 agent（如"这个大 ticket 派给 implementer"）。
+**单次覆盖：** 用户可在单次执行时改为派子 agent（如"这个大待办派给 implementer"）。
 ```
 
 This file is authoritative for the four execution skills. Both modes follow the same `_agents/*.prompt.md`; only the executor changes.
@@ -347,7 +348,7 @@ Show the actual changed files and key content. Do not copy conditional architect
 ✅ docs/agents/language.md        — 用户确认的交互语言与业务产物语言
 ✅ .scratch/README.md             — 本地 tracker 说明
 ✅ .scratch/architecture.md       — 项目架构图（已有代码时）
-✅ .scratch/<feature>/changelog.md — 小改动的记录兜底（小改动不必走 spec/plan/ticket）
+✅ .scratch/<feature>/changelog.md — 小改动的记录兜底（小改动不必走 Spec/Plan/Todo）
 ✅ AGENTS.md                      — 新增 ## Agent skills 指针区块
 
 新开发者/agent 进入仓库后，读 AGENTS.md 即可知道 issue 在 .scratch/，

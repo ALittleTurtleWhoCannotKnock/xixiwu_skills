@@ -151,7 +151,7 @@ issues/
 
 Keep `Spec:` and `Plan:` separate: locally `spec-v(N+1).md` / `plan.md#P<N>`, remotely the Spec-version reference / Plan issue and P<N>. If a plan is unnecessary, declare `Plan: none (原因)` and include necessary decisions. Use `Blocked by:` for dependencies.
 
-A new ticket's `Parent:` is the same Plan or the shared fallback, **not the old ticket it continues**. Maintain local INDEX/root navigation or remote native relationships/type labels. Use only a configured Project. Do not rewrite historical ticket versions, parents, or states because the current Spec changed.
+A new ticket's `Parent:` is the same Plan or the shared fallback, **not the old ticket it continues**. Use the shared Todo naming for new titles, type labels, and navigation. Maintain local INDEX/root navigation or remote native relationships/type labels. Use only a configured Project. Do not rewrite historical ticket versions, parents, or states because the current Spec changed.
 
 ### Step 7: Hand off to implementation
 

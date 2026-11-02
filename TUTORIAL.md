@@ -39,11 +39,11 @@
 | 需求在脑子里，怕 agent 理解错 | `/flow-clarify` | 对齐后的需求 + CONTEXT.md |
 | 需求已对齐，需要方案文档 | `/flow-spec` | spec（含 seams 分析 + mermaid 图），存入 tracker |
 | spec 已确认，需要确定技术路径 | `/flow-plan` | 技术决策、包分解、改动锚点与验证策略，经用户批准 |
-| plan 已批准，需要拆分执行 | `/flow-todo` | 带依赖关系的 ticket 列表；单票小改动可明确省略 plan |
-| ticket 已确认，开始写代码 | `/flow-do` | 可运行代码 + 测试 |
-| 已实现 spec 有变动 | `/flow-amend` | spec-v(N+1) + 更新 INDEX + 新 ticket |
+| plan 已批准，需要拆分执行 | `/flow-todo` | 带依赖关系的待办列表；单票小改动可明确省略 plan |
+| 待办已确认，开始写代码 | `/flow-do` | 可运行代码 + 测试 |
+| 已实现 spec 有变动 | `/flow-amend` | spec-v(N+1) + 更新 INDEX + 新待办 |
 | 想查看当前进度 | `/flow-status` | 只读进度快照：阶段、Status、阻塞、下一步 |
-| 后端 ticket 涉及端点 | （由 /flow-do 触发）`/flow-api` | 接口契约片段 |
+| 后端待办涉及端点 | （由 /flow-do 触发）`/flow-api` | 接口契约片段 |
 | 提交前 | （由 /flow-do 触发）`/flow-simplify` | 清理后的代码 + 人工确认 |
 | 遇到难调的 bug | `/flow-debug` | 修复 + 回归测试 |
 | 要沉淀会话记录 | `/flow-export` | session.md + session.jsonl |
@@ -86,7 +86,7 @@ Agent 探测后报告判定，例如：
 
 选择分派后，Agent 根据当前工具的实际模型列表引导选择，或由你明确选择继承当前主会话（`inherit`），写入 `execution-mode.md` 的“基础模型”。模板不预填具体模型。Pi 生成 agent 时读取该项目配置；其他工具分派时按支持的格式应用，尚未实际调用的模型明确标注运行未验证。
 
-语言在生成后续文档前确认并保存，配置使用固定键 `interaction_language` 和 `artifact_language`，值由使用者选择。选择中文交互、英文产物后，追问、review 摘要和 `/flow-status` 说明用中文，Spec/Plan/Ticket 的可读内容用英文；协议字段和状态值不翻译。临时指定某一项只影响当前任务；原始会话导出不因产物语言而翻译原文。
+语言在生成后续文档前确认并保存，配置使用固定键 `interaction_language` 和 `artifact_language`，值由使用者选择。选择中文交互、英文产物后，追问、review 摘要和 `/flow-status` 说明用中文，Spec/Plan/Todo 的可读内容用英文；协议字段和状态值不翻译。临时指定某一项只影响当前任务；原始会话导出不因产物语言而翻译原文。
 
 ### 产出
 
@@ -100,7 +100,7 @@ docs/agents/
 AGENTS.md               # 根目录指针（新开发者/agent 一眼可见）
 ```
 
-**关键：** 偏好都是“定默认，单次可覆盖”。比如 execution-mode 选了“派子 agent”，某张小 ticket 说“别派了”，就临时改主会话做；指定“这轮 Plan 用中文”也不把项目的英文产物默认改掉。旧项目只补语言时不重选模型或其他设置，不自动重译既有文档。
+**关键：** 偏好都是“定默认，单次可覆盖”。比如 execution-mode 选了“派子 agent”，某张小待办说“别派了”，就临时改主会话做；指定“这轮 Plan 用中文”也不把项目的英文产物默认改掉。旧项目只补语言时不重选模型或其他设置，不自动重译既有文档。
 
 ---
 
@@ -197,9 +197,9 @@ Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`
 - 改动锚点：现有挂接点与目标态分别标明，说明由哪一阶段生成目标态
 - 全局验证策略，以及方案的批准状态
 
-现有挂接点在开工前核实；目标态在负责生成它的 ticket/前置包完成后检查。plan 由你 review 批准后进入拆票，已有会话授权直接沿用。plan 就地维护，方法名不复制进 ticket。
+现有挂接点在开工前核实；目标态在负责生成它的待办/前置包完成后检查。plan 由你 review 批准后进入拆票，已有会话授权直接沿用。plan 就地维护，方法名不复制进待办。
 
-远程 Plan issue 正文用 `Spec:` 关联当前执行版，Spec 正文用 `Plan:` 反向引用；拆票后 Plan 列出关联 tickets。评论记录讨论和批准依据，open/closed 不代替批准状态。草案先保存为待 review，批准后更新同一正文，不把现行 plan 放进 Spec 评论或另存本地副本。
+远程 Plan issue 正文用 `Spec:` 关联当前执行版，Spec 正文用 `Plan:` 反向引用；拆票后 Plan 列出关联待办。评论记录讨论和批准依据，open/closed 不代替批准状态。草案先保存为待 review，批准后更新同一正文，不把现行 plan 放进 Spec 评论或另存本地副本。
 
 Plan 的 `Parent:` 指向 Spec：本地更新同一 INDEX 的方案链接，GitHub 建立原生子 issue 并核对。tracker 已指定 Project 时加入同一个 Project，可用 View → Show hierarchy 查看层级；没有 Project 仍可继续普通 Issues 流程。
 
@@ -226,11 +226,13 @@ Agent 会：
 3. 使用 `Parent:` 记录直接归属、`Spec:` / `Plan:` 分别引用 spec 版本和 plan 包，依赖统一写 `Blocked by:`
 4. 向你确认粒度和依赖，然后按 tracker 模式存放：
    - 本地 → `.scratch/<feature-slug>/issues/<NN>-<slug>.md`（从 01 编号，blocker 在前，绝不合并成单文件）
-   - GitHub/GitLab → 每张 ticket 一个 issue
+   - GitHub/GitLab → 每张待办一个 issue
 
 远程票分别写 `Spec: <Spec 版本引用>`、`Plan: <独立 Plan issue> / P<N>`，创建后回填 Plan 的关联清单。本地文件引用格式继续使用 `plan.md#P<N>`。
 
-ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把实际文件链接补入 INDEX；GitHub 同步原生子 issue、类型标签及已配置的 Project。工具不支持、权限不足或父级冲突会报告未同步项，不通过重建 issue 绕过。
+新待办的标题前缀为 `[Todo]`，GitHub 类型标签默认为 `todo`；本地标题、Plan 清单、INDEX 与 `/flow-status` 分组同步使用 Todo/待办。旧 `[Ticket]` / `ticket` 作为历史别名继续查询和复用，重复拆分不因名称不同再建一份。
+
+待办的父级是 Plan，不是 blocker 或被续接的旧待办。本地把实际文件链接补入 INDEX；GitHub 同步原生子 issue、类型标签及已配置的 Project。工具不支持、权限不足或父级冲突会报告未同步项，不通过重建 issue 绕过。
 
 **这是交互型技能，留在主会话。**
 
@@ -238,7 +240,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 
 ```
 .scratch/blog-comments/
-├── INDEX.md                 # 当前规格、Plan 与 ticket 层级导航
+├── INDEX.md                 # 当前规格、Plan 与待办层级导航
 ├── spec.md
 ├── plan.md
 └── issues/
@@ -247,7 +249,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
     └── 03-nested-replies.md
 ```
 
-**单票小改动：** 可以写 `Plan: none (单票小改动)`，必要时也可写 `Spec: none (原因)`。必要技术决策、产品边界、测试 seam 与验收标准收在已确认的 ticket 中，下游不再要求读取被省略的文档。字段格式和状态语义统一见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md)。
+**单票小改动：** 可以写 `Plan: none (单票小改动)`，必要时也可写 `Spec: none (原因)`。必要技术决策、产品边界、测试 seam 与验收标准收在已确认的待办中，下游不再要求读取被省略的文档。字段格式和状态语义统一见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md)。
 
 ---
 
@@ -257,8 +259,8 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 
 ### 何时进入
 
-- 阶段 3 完成，ticket 已确认
-- 有可执行的 ticket（blocker 已解除）
+- 阶段 3 完成，待办已确认
+- 有可执行的待办（blocker 已解除）
 
 ### 执行
 
@@ -271,7 +273,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 ```
 主会话                              子 agent（execution-mode=subagent 时）
   │                                       │
-  ├─ 1. 选 ticket（blocker 已解）          │
+  ├─ 1. 选待办（blocker 已解）          │
   │      （多版本 feature 先读 INDEX.md     │
   │        确定当前 spec 版本）             │
   ├─ 2. 确认验证方式与已有测试落点         │
@@ -283,7 +285,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
   ├─ 3.5 方向修正（若 implementer 报        │
   │      direction error）                 │
   │      ├─ 对齐现有架构                   │
-  │      ├─ 修正 ticket + 层级判断          │
+  │      ├─ 修正待办 + 层级判断          │
   │      ├─ 理解纠偏 → 回写 spec            │
   │      └─ 重新分派（≥2 次则停，人工介入）  │
   ├─ 4. 核对报告 ←────────────────────────┘
@@ -301,8 +303,8 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 **关键边界：**
 
 - **子 agent 不提交、不跑 /flow-simplify** —— 这些是主会话在提交节点、经你人工确认后做的
-- **子 agent 遇到未覆盖的决策会停止并报告**，不猜测、不扩大范围（决策已在 spec/ticket 阶段拍死）
-- **子 agent 报"方向错误"（ticket 方案在现有架构不成立）会触发 Step 3.5**：主会话对齐架构 → 修正 ticket → 按层级判断是否回写 spec → 重新分派；同一 ticket 连续 ≥2 次方向错误则停，转人工
+- **子 agent 遇到未覆盖的决策会停止并报告**，不猜测、不扩大范围（决策已在 spec/待办阶段拍死）
+- **子 agent 报"方向错误"（待办方案在现有架构不成立）会触发 Step 3.5**：主会话对齐架构 → 修正待办 → 按层级判断是否回写 spec → 重新分派；同一待办连续 ≥2 次方向错误则停，转人工
 - **绝不主动提交**：即使全部检查通过，也先停在人工 checkpoint，经你确认才提交
 - **票级完成、功能验收与提交分别处理**：每票实现、必要工程检查和 review 通过即 `resolved` / 自动关闭并继续下游；squash 不要求先提交上游票。人工功能验收集中到 Plan/Spec 的 Acceptance，未提交或未人工验收不拖住合格工程票
 - **execution-mode=inline 时**，主会话参照 `_agents/implementer.prompt.md` 执行同样的实现与验证规则，不重启子进程
@@ -313,7 +315,7 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 
 - 可运行的代码（带测试）
 - Review + /flow-simplify 通过、经你确认的提交
-- 更新的 ticket 状态
+- 更新的待办状态
 
 ---
 
@@ -325,22 +327,22 @@ ticket 的父级是 Plan，不是 blocker 或被续接的旧 ticket。本地把�
 
 | 提交策略 | 触发点 | scope |
 |---------|--------|-------|
-| per-ticket | 每张 ticket 提交前 | 该 ticket 的 diff |
+| per-ticket | 每张待办提交前 | 该待办的 diff |
 | squash | 统一提交前 | 累计 diff |
 
 子 agent 按"复用/质量/效率"三维度审查并修复，**不提交**，返回报告。主会话展示报告，**暂停等你确认**后才提交。
 
 ### `/flow-api` — 接口契约提取
 
-**后端 ticket 涉及对外端点时，由 `/flow-do` 触发（也可手动补生成）。**
+**后端待办涉及对外端点时，由 `/flow-do` 触发（也可手动补生成）。**
 
-主会话确认该 ticket 涉及的端点，分派 `contract-writer` 子 agent 从代码/测试提取契约，写入 `.scratch/<feature>/contracts/<ticket>.md`。每个字段必须溯源代码，不杜撰。前端 agent 据此联调。
+主会话确认该待办涉及的端点，分派 `contract-writer` 子 agent 从代码/测试提取契约，写入 `.scratch/<feature>/contracts/<ticket>.md`。每个字段必须溯源代码，不杜撰。前端 agent 据此联调。
 
 ### `/flow-amend` — 需求变更
 
 **已实现 spec 有变动时使用，不重走全流程。**
 
-只澄清变动部分 → 判断增量或重做 → 保存增量 Spec、更新当前版本引用 → 更新同一 plan 正文 → 续接 ticket。旧 Spec 冻结；本地用版本文件与 INDEX，远程沿用 tracker 的 Spec 版本约定并同步 Plan issue 的 `Spec:`，不新建 Plan issue。业务路径变化时更新功能流程图，模块影响保留文字说明。
+只澄清变动部分 → 判断增量或重做 → 保存增量 Spec、更新当前版本引用 → 更新同一 plan 正文 → 续接待办。旧 Spec 冻结；本地用版本文件与 INDEX，远程沿用 tracker 的 Spec 版本约定并同步 Plan issue 的 `Spec:`，不新建 Plan issue。业务路径变化时更新功能流程图，模块影响保留文字说明。
 
 同步更新 Plan 的 `Parent:` 和导航，旧票保留原版本与状态。GitHub 新版 Spec 另建 issue 时，只在核实同 feature 的旧父级后迁移同一个 Plan；本地 INDEX 保留历史链接并追加新票。`/flow-status` 只读展示这棵树，状态仍从源文件/issue 读取。
 
@@ -374,12 +376,12 @@ Day 1 上午            Day 1 下午            Day 2 上午            Day 2 �
 Day 4 全天
     │
     ▼
-/flow-do（逐 ticket）
+/flow-do（逐待办）
     │
-    ├─ ticket 01: 红绿重构 → 工程核对与 review → resolved / 自动关票，解除 02 依赖
+    ├─ 待办 01: 红绿重构 → 工程核对与 review → resolved / 自动关票，解除 02 依赖
     │     （squash 策略，暂不提交，人工功能验收项留在 Plan）
-    ├─ ticket 02: 同上；涉及端点则立即生成契约
-    ├─ ticket 03: 同上；使用前票的代码与契约
+    ├─ 待办 02: 同上；涉及端点则立即生成契约
+    ├─ 待办 03: 同上；使用前票的代码与契约
     │
     ▼ 执行票均 resolved；功能显示“开发完成，待功能验收”
   分派 /flow-simplify（scope=累计 diff）→ 修复报告
@@ -425,8 +427,8 @@ project/
 |------|------|
 | 先初始化 | 没有 `docs/agents/*.md`，flow-spec/flow-todo/flow-do 会提示先跑 `/flow-init` |
 | 阶段顺序 | 常规 feature：clarify → spec → plan（批准）→ todo → do；小改动按共享约定明确省略 |
-| 产出物即输入 | spec → plan → tickets → 代码；简化票包含被省略文档中的必要决策 |
-| 决策前置 | 产品边界在 spec，技术方案在 plan，票级工程条件在 ticket；人工功能验收集中到 Plan/Spec |
+| 产出物即输入 | spec → plan → 待办 → 代码；简化票包含被省略文档中的必要决策 |
+| 决策前置 | 产品边界在 spec，技术方案在 plan，票级工程条件在待办；人工功能验收集中到 Plan/Spec |
 | 状态与提交 | 本票工程工作通过即 resolved/自动关闭；功能 Acceptance 与提交授权分别记录，均不阻止票级完成 |
 | 子 agent 边界 | 不提交、不跑 /flow-simplify、遇未授权决策停止并报告、报方向错误触发 Step 3.5 |
 | 绝不主动提交 | 任何阶段、任何 agent，未经你明确指示都把改动留在工作区 |

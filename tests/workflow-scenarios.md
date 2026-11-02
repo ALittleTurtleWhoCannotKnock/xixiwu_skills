@@ -82,6 +82,12 @@
 
 使用另建 Spec v2 issue 的同 feature 变更执行 `/flow-amend`，核对仅在旧父级等于先前 Spec 且版本证据一致时迁移同一个 Plan；新票仍挂 Plan，旧票的版本和状态不重写。父级与当前版本并发变化时报告冲突，不覆盖。
 
+## Todo 命名与旧 Ticket 兼容
+
+分别准备本地和模拟 GitHub tracker，保留旧版 Ticket 示例、已批准 Plan 及一张与 P1 范围匹配的旧 `[Ticket]` 待办，GitHub 旧条目只有 `ticket` 类型标签。Plan 的 P2 尚无待办，用户已确认切片和依赖，执行 `/flow-todo`。核对 P1 复用同一条目、不改历史标题/标签，P2 只创建一次且使用 `[Todo]` 标题，GitHub 新类型为 `todo`；本地仍保存到 `issues/<NN>-<slug>.md`，字段、状态、编号、归属与依赖不因更名改变。重复执行不新增相同待办。
+
+继续执行只读 `/flow-status`，核对新的 Todos/待办分组同时包含新旧条目且无重复，不改动源文件或远程数据。初始化新 tracker 时核对新声明使用 Todo；生成 API 片段时使用 `**所属 Todo**`，旧 `**所属 Ticket**` 仍可读，契约文件路径保持原约定。
+
 ## 无 GitHub 的本地层级
 
 准备没有 remote 的临时项目、本地 tracker、inline 模式和已确认的小功能。执行 `/flow-spec`、`/flow-plan`、`/flow-todo`，检查 `.scratch/README.md` 入口与 feature INDEX 的链接可实际定位到文件，Parent 字段与树一致，仍为每票一个平铺文件。首次保存 Spec 时就有索引，不等待 /flow-amend；单票小改动省略 Spec/Plan 时也能只登记真实 ticket，不补造文档。

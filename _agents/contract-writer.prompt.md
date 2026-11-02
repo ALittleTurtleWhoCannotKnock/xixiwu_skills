@@ -27,7 +27,7 @@ One file per ticket: `.scratch/<feature-slug>/contracts/<ticket-slug>.md`. One b
 ```markdown
 ## <METHOD> <path>
 
-**所属 Ticket**: <ticket-slug>
+**所属 Todo**: <ticket-slug>
 **生成时间**: <date>
 **状态**: 已实现并通过测试
 
@@ -42,6 +42,7 @@ One file per ticket: `.scratch/<feature-slug>/contracts/<ticket-slug>.md`. One b
 ```
 
 Field rules:
+- New association fields use `**所属 Todo**`; read existing `**所属 Ticket**` as the same association without renaming fragment paths or rewriting unrelated history.
 - types in TypeScript shorthand (`string | null`, `number[]`)
 - required-ness and constraints inline on the field line
 - error codes must match the actual values in code (the frontend agent branches on them)
