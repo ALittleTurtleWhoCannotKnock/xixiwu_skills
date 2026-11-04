@@ -52,7 +52,14 @@ def is_previous_skill(path, old, new):
     previous_header = header.replace(f"\nname: {new}\n".encode(), f"\nname: {old}\n".encode(), 1)
     for old_command, new_command in RENAMED_SKILLS.items():
         previous_header = previous_header.replace(f"/{new_command}".encode(), f"/{old_command}".encode())
-    return installed.read_bytes().replace(b"\r\n", b"\n").startswith(previous_header)
+    previous_headers = [previous_header]
+    if old == "e2e-test":
+        # Keep recognizing this bundle's copies after changing the discovery description.
+        previous_headers.append(
+            b'---\nname: e2e-test\ndescription: "Manually create maintained browser E2E coverage '
+            b'for a feature. Discover and reuse the project framework, fixtures, and CI conventions; '
+            b'require stable selectors, deterministic waits, and local headless success."\n---\n')
+    return installed.read_bytes().replace(b"\r\n", b"\n").startswith(tuple(previous_headers))
 
 
 def main():

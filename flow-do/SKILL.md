@@ -132,3 +132,5 @@ On explicit acceptance, check the current version and engineering completion, re
 ## Outputs and completion
 
 Deliver verified changes, maintained useful coverage, review/cleanup results, actual ticket/closure state, Git authorization/working-tree facts, and any required contract fragments. A ticket is resolved by engineering completion; a feature is accepted by explicit user functional confirmation; a commit follows its separate authorization/checkpoint.
+
+When the user requests a local browser test pass after Do, `/flow-e2e` reuses this handoff and the relevant Todo/Plan/Spec to start or reuse the app and exercise the completed feature. It does not require creating a regression suite or run automatically after every Todo.

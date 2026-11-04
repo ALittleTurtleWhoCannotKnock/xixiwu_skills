@@ -95,7 +95,7 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 | 辅助 | `/flow-amend` | 已实现 spec 的需求变动（增量演进 + 深度判断闸门） | 交互型，留主会话 |
 | 辅助 | `/flow-simplify` | 提交前清理代码（复用/质量/效率） | ✅ `simplifier` |
 | 辅助 | `/flow-debug` | 系统化调试循环 | 交互型，留主会话 |
-| 辅助 | `/flow-e2e` | 写可进 CI 的浏览器 E2E 测试（先探测项目体系） | 交互型编排，写测试可派 implementer |
+| 辅助 | `/flow-e2e` | 本地启动并实际操作浏览器验测；明确要求时沉淀回归用例 | 按 execution-mode 执行，执行者需有浏览器能力 |
 | 辅助 | `/flow-export` | 导出会话原始记录为 Markdown | ✅ `exporter` |
 | 辅助 | `/flow-api` | 按待办产出接口契约（给前端 agent） | ✅ `contract-writer` |
 

@@ -409,6 +409,43 @@ class InstallTests(unittest.TestCase):
             self.assertFalse(bundle.exists(), bundle)
         self.assertEqual(len(self.backup_files()), len(bundles) * len(RENAMED_SKILLS))
 
+    def test_legacy_e2e_metadata_migrates_without_taking_personal_skill(self):
+        legacy = (b'---\nname: e2e-test\ndescription: "Manually create maintained browser E2E coverage '
+                  b'for a feature. Discover and reuse the project framework, fixtures, and CI conventions; '
+                  b'require stable selectors, deterministic waits, and local headless success."\n---\n\n'
+                  b'Previous regression-test instructions.\n')
+        owned = []
+        for index, location in enumerate(self.locations.values()):
+            path = self.home / location / "e2e-test"
+            path.mkdir(parents=True)
+            data = legacy.replace(b"\n", b"\r\n") if index == 1 else legacy
+            (path / "SKILL.md").write_bytes(data)
+            owned.append((path, data))
+        personal = self.home / ".codex/skills/e2e-test/SKILL.md"
+        personal.parent.mkdir(parents=True)
+        custom = b"---\nname: e2e-test\ndescription: My personal browser checks.\n---\n\nUser instructions.\n"
+        personal.write_bytes(custom)
+        result = self.install("all", "--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path, data in owned:
+            self.assertEqual((path / "SKILL.md").read_bytes(), data)
+        self.assertFalse((self.home / ".local").exists())
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for path, _ in owned:
+            self.assertFalse(path.exists() or path.is_symlink(), path)
+        backups = list((self.home / ".local/share/dev-flow-skills/backups").iterdir())
+        self.assertEqual(len(backups), 1)
+        for path, data in owned:
+            self.assertEqual((backups[0] / path.relative_to(self.home) / "SKILL.md").read_bytes(), data)
+        self.assertEqual(personal.read_bytes(), custom)
+        for location in self.locations.values():
+            self.assertEqual((self.home / location / "flow-e2e").resolve(), self.bundle / "flow-e2e")
+        result = self.install("all")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("安装内容已是当前版本。", result.stdout)
+        self.assertEqual(personal.read_bytes(), custom)
+
     def test_rename_respects_target_selection_and_unrelated_same_names(self):
         for target in [*self.locations, "all"]:
             with self.subTest(target=target):
