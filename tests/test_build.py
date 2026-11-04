@@ -294,7 +294,7 @@ class InstallTests(unittest.TestCase):
                        (".pi/agent/skills/dev-flow-skills", ".codex/skills/dev-flow-skills")]
         for old in old_bundles:
             old.mkdir(parents=True)
-            for name in self.skills:
+            for name in RENAMED_SKILLS.values():
                 (old / name).mkdir()
                 (old / name / "SKILL.md").write_text("old bundled skill\n")
             (old / "_agents").mkdir()
@@ -315,7 +315,7 @@ class InstallTests(unittest.TestCase):
         self.assertFalse((self.home / ".codex/skills/flow-plan").exists())
         self.assertEqual((managed / "SKILL.md").read_text(), "managed skill\n")
         self.assertEqual(unrelated.read_text(), "user skill\n")
-        self.assertEqual(len(self.backup_files()), len(old_bundles) * len(self.skills))
+        self.assertEqual(len(self.backup_files()), len(old_bundles) * len(RENAMED_SKILLS))
         backup_links = [p for p in (self.home / ".local").rglob("*") if p.is_symlink()]
         self.assertEqual(len(backup_links), 3)
         self.assertTrue(all(p.resolve() == managed for p in backup_links))
@@ -338,7 +338,7 @@ class InstallTests(unittest.TestCase):
                 self.assertFalse((self.home / ".pi").exists())
 
     def test_renamed_skills_back_up_owned_links_and_copies(self):
-        self.assertEqual(self.skills, sorted(RENAMED_SKILLS.values()))
+        self.assertTrue(set(RENAMED_SKILLS.values()).issubset(self.skills))
         previous = {}
         managed_sources = {}
         for location_index, location in enumerate([*self.locations.values(), ".codex/skills"]):

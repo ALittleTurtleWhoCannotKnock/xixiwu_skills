@@ -111,7 +111,8 @@ def main():
             for old in directory.iterdir():
                 if ((old / "_agents").is_dir()
                         and any(all((old / name / "SKILL.md").is_file() for name in names)
-                                for names in ([skill.name for skill in skills], RENAMED_SKILLS))):
+                                for names in ([skill.name for skill in skills],
+                                              RENAMED_SKILLS.values(), RENAMED_SKILLS))):
                     retire.append(old)
 
     # Generate into an isolated directory, then validate every existing header before writing.

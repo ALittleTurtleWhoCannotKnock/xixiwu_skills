@@ -48,6 +48,10 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 
 ## 主流程
 
+可通过 [`/flow-run`](./flow-run/SKILL.md) 交给 Bot／主 agent 总编排：从需求准备 Spec，与你确认后，自动规划 Plan、拆分 Todo、实现并执行适用的本地浏览器验测。它复用下列技能，保留单独调用时的交互；技术方案和拆分按任务授权自动决策，人工功能验收及 Git／部署仍分别处理。重启后读取实际产物与小型续跑记录恢复，Bot 的唤醒与会话保存由宿主负责。接入说明见[Bot 配置](./flow-run/references/bot-setup.md)。
+
+需要专职 Agent 时，流程 Agent 作为唯一用户入口，将需求、方案（Plan＋Todo）、开发和测试交给已绑定的执行者；问题与结果统一交回流程 Agent，由它核对后推进。角色、任务和结果格式见[通用协作协议](./flow-run/references/team-mode.md)，具体派发 API 留在宿主适配层，阶段技能保持独立可复用。
+
 ```
 /flow-init       流程初始化（每个仓库首次配置，缺项可单独补齐）
     ↓
@@ -85,6 +89,7 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 
 | 阶段 | 命令 | 功能 | 可分派子 agent |
 |------|------|------|---------------|
+| 总编排 | `/flow-run` | Spec 人工确认后自动规划、拆分、实现、验测与续跑 | 主 agent 编排，执行遵循项目模式 |
 | 0. 流程初始化 | `/flow-init` | 探测 tracker 类型，生成声明（每仓库首次配置） | — |
 | 1. 需求澄清 | `/flow-clarify` | 追问对齐需求，维护 CONTEXT.md | 交互型，留主会话 |
 | 2. 规格定义 | `/flow-spec` | 四段式结构化 spec（产品意图与边界），含 seams 分析 | 交互型，留主会话 |
@@ -262,6 +267,9 @@ dev-flow-skills/
 │   ├── install.py            # 安装、备份与 agent 配置保留
 │   └── codex/README.md
 ├── tests/                    # 适配脚本检查与流程场景
+├── flow-run/
+│   ├── SKILL.md
+│   └── references/bot-setup.md
 ├── flow-init/
 │   └── SKILL.md
 ├── flow-clarify/

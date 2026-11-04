@@ -35,6 +35,7 @@
 
 | 你的状态 | 执行命令 | 产出 |
 |---------|---------|------|
+| 希望 Bot 自动推进整个功能 | `/flow-run` | Spec 确认后自动推进到工程交付；中断可续跑 |
 | 新仓库首次接入或补语言 | `/flow-init` | 四项配置（tracker / 提交策略 / 执行模式与模型 / 语言） |
 | 需求在脑子里，怕 agent 理解错 | `/flow-clarify` | 对齐后的需求 + CONTEXT.md |
 | 需求已对齐，需要方案文档 | `/flow-spec` | spec（含 seams 分析 + mermaid 图），存入 tracker |
@@ -321,6 +322,22 @@ Agent 会：
 ---
 
 ## 辅助技能
+
+### `/flow-run` — Bot／主 agent 总编排
+
+```text
+/flow-run 实现订单筛选与导出。Spec 跟我确认，后续方案和拆分由你决定，继续完成开发和验测。
+```
+
+主 agent 读取已有配置、当前产物和新消息，从第一个未完成阶段继续。需求有实质歧义时追问；Spec 保存后给你确认。确认后自动评审技术 Plan、拆分与复用 Todo、按依赖执行 Do，Web 功能完成后调用 `/flow-e2e` 实际验测。工程票仍按规则自动关闭，Plan/Spec 的人工功能验收保持独立；提交、推送或部署需要对应授权。
+
+采用专职 Agent 时，由流程 Agent 统一与你沟通，按[通用角色协作协议](./flow-run/references/team-mode.md)派发：需求 Agent 执行 Clarify＋Spec，方案 Agent 执行 Plan＋Todo，开发 Agent 执行 Do／Debug／API，测试 Agent 执行适用验测。执行者只向流程 Agent 返回产物、问题和证据，不直接联系用户或通知下一位；流程 Agent 转达你的完整答复、核对当前项目与版本后再推进。具体工具名由宿主映射，不写入各阶段技能。
+
+默认在此次 `/flow-spec` 调用中明确选择不额外生成 HTML；需要时在请求中说明。测试边界并入 Spec 的确认，技术方案和待办拆分记录为“授权自动规划”，不伪装成人工审核。涉及已确认产品范围的变更会回到 Spec 再确认；必要检查失败不能跳过。
+
+本地 `.scratch/<feature>/run.md` 只保存来源引用、上次动作与证据、待回答的问题、失败尝试和新消息位置；实际进度仍从 Spec/Plan/Todo 读取。远程模式下该文件仅为可重建的协调缓存，不增加本地主文档。Bot 宿主需要在用户回复或续跑时重新唤起 agent 并提供完整消息；skill 本身不会常驻。可直接采用[Bot 接入说明中的运行策略](./flow-run/references/bot-setup.md)。
+
+使用 PI Desktop 的 [PI-Bot](https://github.com/vsd269/PI-Bot) 时，参考[专用接入说明](./flow-run/references/pi-bot.md)：先选具备执行能力的 Bot，由其读取固定目录中的完整技能源码；Spec 用 `ask_user` 卡片确认，回答作为新任务继续。它的 Skill 导入会拆成独立资源目录，不能直接照搬本仓库跨目录引用，也不能把宿主任务 `completed` 当作工程通过。现有 `install.sh pi` 面向 Pi CLI，不负责 PI-Bot 插件配置。
 
 ### `/flow-e2e` — 本地浏览器验测
 
