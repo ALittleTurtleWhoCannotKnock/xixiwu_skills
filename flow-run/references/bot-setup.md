@@ -6,6 +6,8 @@ For specialist execution, use the host-neutral [stage-agent collaboration protoc
 
 For [vsd269/PI-Bot on PI Desktop](pi-bot.md), use the host-specific guide. It has its own execution/planner modes, asynchronous question cards, and isolated imported Skill directories; `install.sh pi` targets the Pi CLI and does not configure this plugin. Preserve a readable full source checkout for cross-skill resources.
 
+For [Multica](multica.md), import the unified package into the workspace, bind a permanent role in Instructions, and use the native task/Squad return protocol. Its ordinary background work does not inherit PI-Bot's automatic return behavior.
+
 Use this user-authorized operating policy when configuring the bot, replacing the repository placeholder with an actual permitted workspace:
 
 ```text

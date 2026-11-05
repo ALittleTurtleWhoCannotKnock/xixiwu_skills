@@ -17,26 +17,64 @@
 
 ## 安装与更新
 
+安装和更新前先审阅本仓库 `main` 分支的源码，再通过本地 `install.sh` 统一安装。首次获取源码的步骤见下方[从源码安装](#从源码安装cli)。
+
+### Multica：一个包加一个角色
+
+Multica 的工作区技能与运行时本地技能是两套安装位置。在已登录、选对工作区的 Multica CLI 环境中，进入本仓库运行：
+
+```bash
+# 先预览；用实际 agent ID，不按名称猜测
+./install.sh multica --agent-id <agent-id> --role flow --dry-run
+
+# 导入单个 dev-flow 技能包、追加绑定，并写入流程角色指令
+./install.sh multica --agent-id <agent-id> --role flow
+```
+
+默认从当前 CLI 工作区读取；目标在另一个工作区时，显式加 `--workspace-id <workspace-id>`。读取后核对智能体所属工作区并将后续调用绑定到它，不修改默认工作区。需要覆盖自己以前导入的同名包时，显式加 `--on-conflict overwrite`；默认冲突即停止。只想导入技能可省略 `--agent-id` 和 `--role`，但这不会配置角色。
+
+统一包由原有 `flow-*`、共享规则、资源和角色文档确定性生成，不修改维护源码；内部入口重命名为普通文档，以适应会丢弃嵌套 `SKILL.md` 的宿主。只需一个 `dev-flow` 工作区 Skill，阶段内容仍按需读取。可用 `python3 -B adapters/package_bundle.py --output dist/dev-flow.skill` 生成归档，再在 Multica 的“从本地导入”中选择它。
+
+角色可选 `flow`、`requirements`、`planning`、`development`、`verification`，对应[流程](./roles/flow.md)、[需求](./roles/requirements.md)、[方案](./roles/planning.md)、[开发](./roles/development.md)、[测试](./roles/verification.md)。这些持久角色指令使用中文，阶段 Skill 的内部文档和项目业务产物语言设置保持独立。流程角色只协调和核对，不会因缺少执行者就自行写业务代码。安装器保留角色标记外的已有指令，修改前备份，只更新角色指令并追加技能绑定，不改模型、运行时、Access、环境变量或工具权限。重复安装会更新同一个角色区块；如既有自定义指令与新角色冲突，需自行整理这些自定义要求。
+
+**描述、Skill 和权限各有用途。** Multica 的“描述”仅展示，“指令”才逐次注入；只挂 Skill 不能把一个编程运行时变成只读协调器。角色指令是行为边界，真正限制文件写入、命令或网络需要由宿主/运行时/操作系统实施；Multica 的 Access 控制谁能调用智能体，不是其工具权限。不要把角色自述或提示词遵守当作权限隔离验证。参见 [Multica 官方角色说明](https://github.com/multica-ai/multica/blob/3c5c8b245359b9b8e913a47f97211f2a3426f149/apps/docs/content/docs/agents-create.zh.mdx)和[运行时安全模型](https://github.com/multica-ai/multica/blob/3c5c8b245359b9b8e913a47f97211f2a3426f149/apps/docs/content/docs/security-model.zh.mdx)。
+
+工作区包是导入时的快照，更新本地源码不会自动更新 Multica 数据库中的包；需再次导入。安装器追加绑定以保留其他能力，不会自动删除旧 `flow-run`/`flow-status` 或继承的本地 Skill；确认统一包工作后可在界面停用旧绑定。
+
+### 从源码安装（CLI）
+
 需要 Bash 和 Python 3.9+。将仓库放在长期保留的独立目录中，再选择目标 CLI：
 
 ```bash
 git clone https://github.com/ALittleTurtleWhoCannotKnock/xixiwu_skills.git
 cd xixiwu_skills
+```
+
+审阅 `install.sh`、`adapters/` 及准备安装的技能内容，确认后先预览，再执行本地安装：
+
+```bash
+./install.sh all --dry-run
 ./install.sh all
 
 # 也可以只安装一个 CLI
 ./install.sh pi
 ./install.sh claude-code
 ./install.sh codex
-
-# 先预览；不会修改安装目录
-./install.sh all --dry-run
 ```
 
 同一个入口用于首次安装和后续更新。更新时，在原始仓库目录中执行：
 
 ```bash
-git pull --ff-only && ./install.sh all
+git fetch origin main
+git diff HEAD..origin/main
+```
+
+审阅待更新内容后，再更新源码、预览并安装：
+
+```bash
+git pull --ff-only
+./install.sh all --dry-run
+./install.sh all
 ```
 
 安装器把各技能和 `_agents/` 链接到这份仓库；Pi / Claude Code 的 agent 文件由适配器生成。保留仓库的位置，以免软链接失效；源仓库放在技能扫描目录里时，先移到独立目录。
@@ -276,7 +314,10 @@ dev-flow-skills/
 ├── adapters/                 # 跨工具适配
 │   ├── build.sh
 │   ├── install.py            # 安装、备份与 agent 配置保留
+│   ├── package_bundle.py     # 从模块化源码构建一个 dev-flow.skill
+│   ├── multica.py            # 工作区包导入、追加绑定及托管角色指令
 │   └── codex/README.md
+├── roles/                    # 五种中文持久角色指令，不替代宿主工具权限
 ├── tests/                    # 适配脚本检查与流程场景
 ├── flow-run/
 │   ├── SKILL.md
