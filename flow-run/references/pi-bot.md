@@ -2,6 +2,24 @@
 
 This guide is based on [vsd269/PI-Bot](https://github.com/vsd269/PI-Bot), source revision `da54ae7f1cab7739691a3c4fc638101fa01fe120` (manifest 0.3.93). It is a **PI Desktop plugin**, not the Pi coding CLI targeted by `install.sh pi`. CLI installation does not import skills or register worker roles inside PI Desktop.
 
+## Five-Bot project team
+
+For stage specialists, use the [importable team template](../assets/pi-bot-team.template.json). It contains five ordinary `Worker` Bots: Flow, Requirements, Planning (Plan plus Todo), Development, and Verification. They use private chats, with no group or schedule created. The default Chief, if present, can stay; it is not a sixth required workflow role. Even the Flow Bot stays an execution-capable Worker so it can read project state, save its checkpoint and ask the user without planner-only restrictions.
+
+1. Replace `__PROJECT_KEY__` throughout a copy of the JSON with one unique project prefix such as `A`. Keep another prefix for another project. Do not insert absolute paths into the import file: PI-Bot sanitizes them during template parsing.
+2. Open Settings → About PI Bot → PI extensions → Backup and restore → Team configuration template. Select the JSON, preview the five names/instructions, then explicitly confirm creation. Depending on the installed UI, Backup and restore may also be a direct settings entry.
+3. After import, open each Bot's name/details → Edit conversation. Set all five working directories to the same actual project repository, and choose the user's available model/default model. The import intentionally leaves model account, directory, permissions and attached capabilities unset. It does not start tasks.
+4. In the Flow Bot's instructions, replace `__PROJECT_ROOT__` with that repository and `__SKILLS_ROOT__` with the full skill checkout path. Do this **after import**; importing filled local paths would redact them. Stage workers receive both source paths in their assignments and need native read access to them.
+5. Keep these collaborating Bots out of PI-Bot's **Private Bot privacy mode**: that feature blocks automatic cross-Bot messaging/results. Ordinary private chats are different from the privacy flag. Do not change existing privacy settings automatically; use appropriately configured members.
+6. Verify one actual member per team marker/role, its exact name/ID and directory. A repeated import adds new Bots and may rename duplicates; it does not update the old team or repair textual role bindings. Resolve duplicates before dispatching work.
+7. Complete missing project workflow settings through flow-init, then send new work only to the Flow Bot. Its native tools must actually be allowed to read/write the required project artifacts, execute necessary commands, and access a supported browser for browser verification. Use applicable PI approval, not a blanket permission change.
+
+The Skill names in `skillReferences` are informational import references; PI-Bot does not automatically attach the Skill library. These instructions deliberately read the complete original source checkout to preserve resources. The JSON is a PI-Bot adapter artifact; [team-mode.md](team-mode.md) remains the host-neutral protocol.
+
+Before assigning a real feature, ask the Flow Bot to perform a **read-only readiness check**: identify its four actual teammates, inspect visible directory settings, read the main/team and stage source entries, check the project tracker/language/model setup and actual browser capability, and list missing settings. The current `list_bots` result does not expose saved working-directory fields; report those as unverified unless observed through another supported mechanism. If the user explicitly requests it, bounded read-only worker checks can establish each actual session directory/source access. Do not infer readiness from names or instructions alone. The check must not start a feature, run migrations, change Bot settings or manufacture Spec approval.
+
+Source references: [team template parser/creation](https://github.com/vsd269/PI-Bot/blob/da54ae7f1cab7739691a3c4fc638101fa01fe120/src/team-templates.js), [template UI](https://github.com/vsd269/PI-Bot/blob/da54ae7f1cab7739691a3c4fc638101fa01fe120/renderer/work-settings.mjs), [Bot editing](https://github.com/vsd269/PI-Bot/blob/da54ae7f1cab7739691a3c4fc638101fa01fe120/renderer/app.mjs), and [privacy restrictions](https://github.com/vsd269/PI-Bot/blob/da54ae7f1cab7739691a3c4fc638101fa01fe120/src/privacy.js).
+
 ## Start with one execution-capable Bot
 
 This section is the inline starting option. For the requested specialist setup, use the host-neutral [team protocol](team-mode.md) and bind its roles to actual PI-Bot members. Keep this file as a host adapter reference; it does not define the workflow or require the same role topology on other platforms.
