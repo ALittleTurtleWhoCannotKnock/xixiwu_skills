@@ -1,10 +1,13 @@
 import os
+import json
+import hashlib
 from pathlib import Path
 import shutil
 import shlex
 import subprocess
 import tempfile
 import unittest
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +18,231 @@ RENAMED_SKILLS = {
     "simplify": "flow-simplify", "diagnosing-bugs": "flow-debug",
     "e2e-test": "flow-e2e", "to-api-contract": "flow-api", "export-session": "flow-export",
 }
+
+
+class DistributionTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="dev-flow-distribution-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.state = self.root / "state.json"
+        self.bin = self.root / "bin"
+        self.bin.mkdir()
+        self.env = os.environ.copy()
+        self.env["PATH"] = str(self.bin) + os.pathsep + self.env["PATH"]
+        self.env["DEV_FLOW_TEST_STATE"] = str(self.state)
+        self.env["XDG_DATA_HOME"] = str(self.root / "data")
+        fake = self.bin / "multica"
+        fake.write_text("""#!/usr/bin/env python3
+import json,os,sys,zipfile
+from pathlib import Path
+p=Path(os.environ['DEV_FLOW_TEST_STATE']);s=json.loads(p.read_text());a=sys.argv[1:]
+workspace=None
+if a[:1]==['--workspace-id']:workspace=a[1];a=a[2:]
+if a[-2:]==['--output','json']:a=a[:-2]
+s['calls'].append(a[:3])
+if s.get('fail_on')==a[:2]:
+ p.write_text(json.dumps(s));print('Controlled failure',file=sys.stderr);raise SystemExit(1)
+if a[:2]==['agent','get']:
+ if s.get('require_workspace') and workspace!=s['agent']['workspace_id']:
+  p.write_text(json.dumps(s));print('Workspace-scoped object not found',file=sys.stderr);raise SystemExit(1)
+ out=s['agent']
+elif a[:2]==['skill','import']:
+ assert workspace==s['agent']['workspace_id']
+ with zipfile.ZipFile(a[a.index('--file')+1]) as z:
+  assert [n for n in z.namelist() if Path(n).name.lower()=='skill.md']==['SKILL.md']
+ out={'status':'updated' if s.get('imported') else 'created','skill':{'id':'bundle-id'}};s['imported']=True
+elif a[:3]==['agent','skills','add']:
+ assert workspace==s['agent']['workspace_id'];s['attached']=['existing-id','bundle-id'];out={}
+elif a[:3]==['agent','skills','list']:out=[{'id':x} for x in s.get('attached',[]) if not (s.get('hide_binding') and x=='bundle-id')]
+elif a[:2]==['agent','update']:
+ assert a[3]=='--instructions' and workspace==s['agent']['workspace_id']
+ s['agent']['instructions']=a[4];out=s['agent']
+else:raise RuntimeError(a)
+p.write_text(json.dumps(s));print(json.dumps(out))
+""")
+        fake.chmod(0o755)
+
+    def configure(self, instructions="User rule: keep existing behavior."):
+        state = {"calls": [], "agent": {"id": "agent-1", "name": "Coordinator",
+                 "workspace_id": "workspace-1", "instructions": instructions,
+                 "model": "user-model", "runtime_id": "runtime-1", "permission_mode": "private"}}
+        self.state.write_text(json.dumps(state))
+        return state
+
+    def install(self, *args):
+        return subprocess.run(["bash", str(ROOT / "install.sh"), "multica", *args],
+                              cwd=self.root, env=self.env, text=True, capture_output=True)
+
+    def bundle_source(self):
+        source = self.root / "bundle source"
+        shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns(".git", "dist", "__pycache__"))
+        return source
+
+    def build_bundle(self, source, output):
+        return subprocess.run(["python3", "-B", str(source / "adapters/package_bundle.py"),
+                               "--output", str(output)], capture_output=True, text=True)
+
+    def test_single_bundle_is_complete_deterministic_and_preserves_sources(self):
+        output = self.root / "dev-flow.skill"
+        sources = {p: p.read_bytes() for p in ROOT.glob("*/SKILL.md")}
+        def build():
+            run = subprocess.run(["python3", "-B", str(ROOT / "adapters/package_bundle.py"),
+                                  "--output", str(output)],capture_output=True,text=True)
+            self.assertEqual(run.returncode, 0, run.stderr)
+        build()
+        first = output.read_bytes()
+        build()
+        self.assertEqual(output.read_bytes(), first)
+        for p,data in sources.items():
+            self.assertEqual(p.read_bytes(),data)
+        with zipfile.ZipFile(output) as archive:
+            names = archive.namelist()
+            self.assertEqual([n for n in names if Path(n).name.lower()=="skill.md"], ["SKILL.md"])
+            manifest = json.loads(archive.read("bundle-manifest.json"))
+            self.assertEqual(set(manifest["stages"]), {p.parent.name for p in sources})
+            for name,sha in manifest["sha256"].items():
+                self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(),sha,name)
+            for p in sources:
+                self.assertIn(p.parent.name+"/INSTRUCTIONS.md", names)
+            self.assertIn("_agents/workflow-contract.md",names)
+            self.assertIn("roles/flow.md",names)
+            guide=archive.read("flow-run/INSTRUCTIONS.md").decode()
+            self.assertIn("../flow-plan/INSTRUCTIONS.md",guide)
+
+    def test_bundle_rejects_symlinks_before_replacing_output(self):
+        source = self.bundle_source()
+        output = self.root / "dev-flow.skill"
+        for relative in ("flow-run/references", "flow-plan/SKILL.md", "roles", "adapters/bundle-entry.md"):
+            with self.subTest(relative=relative):
+                output.write_bytes(b"previous bundle")
+                path = source / relative
+                saved = self.root / "saved resource"
+                path.rename(saved)
+                path.symlink_to(saved, target_is_directory=saved.is_dir())
+                try:
+                    run = self.build_bundle(source, output)
+                    self.assertNotEqual(run.returncode, 0)
+                    self.assertEqual(output.read_bytes(), b"previous bundle")
+                finally:
+                    path.unlink()
+                    saved.rename(path)
+
+    def test_bundle_rejects_missing_inputs_and_colliding_resource_names(self):
+        source = self.bundle_source()
+        output = self.root / "dev-flow.skill"
+        for relative in ("_agents", "roles", "adapters/bundle-entry.md"):
+            with self.subTest(relative=relative):
+                output.unlink(missing_ok=True)
+                path = source / relative
+                saved = self.root / "saved resource"
+                path.rename(saved)
+                try:
+                    run = self.build_bundle(source, output)
+                    self.assertNotEqual(run.returncode, 0)
+                    self.assertFalse(output.exists())
+                finally:
+                    saved.rename(path)
+        output.unlink(missing_ok=True)
+        (source / "flow-plan/INSTRUCTIONS.md").write_text("Conflicting resource")
+        run = self.build_bundle(source, output)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertFalse(output.exists())
+
+    def test_bundle_rejects_oversized_resources_before_replacing_output(self):
+        source = self.bundle_source()
+        output = self.root / "dev-flow.skill"
+        output.write_bytes(b"previous bundle")
+        for relative in ("flow-plan/SKILL.md", "adapters/bundle-entry.md"):
+            with self.subTest(relative=relative):
+                path = source / relative
+                previous = path.read_bytes()
+                path.write_bytes(b"x" * ((1 << 20) + 1))
+                try:
+                    run = self.build_bundle(source, output)
+                    self.assertNotEqual(run.returncode, 0)
+                    self.assertEqual(output.read_bytes(), b"previous bundle")
+                finally:
+                    path.write_bytes(previous)
+
+    def test_unsupported_conflict_policies_do_not_call_multica(self):
+        for policy in ("rename", "skip"):
+            with self.subTest(policy=policy):
+                self.configure()
+                run = self.install("--agent-id", "agent-1", "--role", "flow", "--on-conflict", policy)
+                self.assertNotEqual(run.returncode, 0)
+                self.assertEqual(json.loads(self.state.read_text())["calls"], [])
+
+    def test_bundle_rejects_resource_count_and_total_size_limits(self):
+        source = self.bundle_source()
+        output = self.root / "dev-flow.skill"
+        for count, size in ((512, 1), (9, 1 << 20)):
+            with self.subTest(count=count, size=size):
+                output.write_bytes(b"previous bundle")
+                extra = source / "flow-plan/extra"
+                extra.mkdir()
+                try:
+                    for index in range(count):
+                        (extra / f"{index}.txt").write_bytes(b"x" * size)
+                    run = self.build_bundle(source, output)
+                    self.assertNotEqual(run.returncode, 0)
+                    self.assertEqual(output.read_bytes(), b"previous bundle")
+                finally:
+                    shutil.rmtree(extra)
+
+    def test_multica_previews_and_updates_only_managed_instructions_and_binding(self):
+        before=self.configure()
+        run=self.install("--agent-id","agent-1","--role","flow","--dry-run")
+        self.assertEqual(run.returncode,0,run.stderr)
+        self.assertEqual(json.loads(self.state.read_text())["agent"],before["agent"])
+        self.assertEqual(json.loads(self.state.read_text())["calls"],[["agent","get","agent-1"]])
+        run=self.install("--agent-id","agent-1","--role","flow")
+        self.assertEqual(run.returncode,0,run.stderr)
+        saved=json.loads(self.state.read_text())
+        self.assertEqual(saved["attached"],["existing-id","bundle-id"])
+        for key in ("model","runtime_id","permission_mode"):
+            self.assertEqual(saved["agent"][key],before["agent"][key])
+        text=saved["agent"]["instructions"]
+        self.assertTrue(text.startswith(before["agent"]["instructions"]))
+        self.assertEqual(text.count("<!-- dev-flow-role:begin -->"),1)
+        backups=list((self.root/"data/dev-flow-skills/backups").glob("*.json"))
+        self.assertEqual(len(backups),1)
+        self.assertEqual(backups[0].stat().st_mode & 0o777,0o600)
+        run=self.install("--agent-id","agent-1","--role","flow","--on-conflict","overwrite")
+        self.assertEqual(run.returncode,0,run.stderr)
+        again=json.loads(self.state.read_text())
+        self.assertEqual(again["agent"]["instructions"],text)
+        self.assertEqual(sum(call[:2]==["agent","update"] for call in again["calls"]),1)
+
+    def test_invalid_role_markers_and_workspace_do_not_mutate(self):
+        for extra,body in (([],"<!-- dev-flow-role:begin -->broken"),
+                           (["--workspace-id","another-workspace"],"User rule")):
+            with self.subTest(extra=extra):
+                before=self.configure(body)
+                run=self.install("--agent-id","agent-1","--role","flow",*extra)
+                self.assertNotEqual(run.returncode,0)
+                saved=json.loads(self.state.read_text())
+                self.assertEqual(saved["agent"],before["agent"])
+                self.assertFalse(saved.get("imported",False))
+
+    def test_explicit_workspace_is_used_for_initial_agent_lookup(self):
+        before=self.configure();self.state.write_text(json.dumps({**before,"require_workspace":True}))
+        run=self.install("--agent-id","agent-1","--role","flow","--dry-run")
+        self.assertNotEqual(run.returncode,0)
+        run=self.install("--workspace-id","workspace-1","--agent-id","agent-1","--role","flow","--dry-run")
+        self.assertEqual(run.returncode,0,run.stderr)
+        self.assertEqual(json.loads(self.state.read_text())["agent"],before["agent"])
+
+    def test_failed_import_or_unverified_binding_does_not_change_instructions(self):
+        for extra in ({"fail_on":["skill","import"]},{"hide_binding":True}):
+            with self.subTest(extra=extra):
+                before=self.configure()
+                self.state.write_text(json.dumps({**before,**extra}))
+                run=self.install("--agent-id","agent-1","--role","flow")
+                self.assertNotEqual(run.returncode,0)
+                saved=json.loads(self.state.read_text())
+                self.assertEqual(saved["agent"],before["agent"])
+                self.assertFalse(any(call[:2]==["agent","update"] for call in saved["calls"]))
 
 
 class BuildTests(unittest.TestCase):
