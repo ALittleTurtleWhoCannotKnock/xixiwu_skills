@@ -68,7 +68,8 @@ flowchart TB
 ## 关键流转
 
 - **主流程（实线）**：flow-init → flow-clarify → flow-spec → flow-plan（人工审）→ flow-todo → flow-do → 人工确认 → 提交
-- **增量演进**：已实现 Spec 有变动 → flow-amend → 保存增量版本、更新当前版本引用与同一 Plan 正文、续接待办 → flow-do
+- **范围拆解**：Spec → 一个或多个独立 Plan → 各 Plan 的简单工程 Todo；AI 判断 Plan 数量，用户指定数量／分组优先，实际独立性／覆盖冲突先报告，不以内部包编号代替 Plan
+- **增量演进**：Spec 有变动 → flow-amend → 更新版本及所有适用 Plan 引用，仅修改受影响的方案／Todo，保留未变范围的批准与验收 → flow-do
 - **分派（虚线）**：flow-spec → scout；flow-do → implementer / simplifier / contract-writer
 - **版本与状态管理**：本地由 INDEX 记录当前 Spec，远程按 tracker 的版本引用及 Plan 正文 `Spec:` 核对；Todo 用 `Spec:` / `Plan:` 分别关联。默认 `ready → claimed → resolved`，搁置用 `parked`，旧 `code-complete` 只按 tracker 声明兼容。本票实现、必要工程检查、审查和必需产物通过后自动 resolved，远程同步关闭并核对状态；squash 不阻塞下游。人工功能验收集中到 Plan（无 Plan 时 Spec），提交另需用户授权，均不阻止合格待办关闭。共享定义见 `_agents/workflow-contract.md`
 - **人工卡点**：simplifier 报告 → 人工确认 → 提交

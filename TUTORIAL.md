@@ -192,7 +192,7 @@ spec 确认后，把技术决策、实现路径与风险在 plan 中确定，再
 /flow-plan
 ```
 
-Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`；GitHub/GitLab 创建或更新独立 Plan issue，现行方案写在正文：
+Agent 复用代码上下文，先判断 Spec 需要一个还是多个独立 Plan；用户指定数量／分组优先。每个 Plan 能从既有基线独立实现／验证，再拆简单工程 Todo。不能用前端／后端／测试阶段或 P1/P2 包编号冒充独立 Plan；数量与独立性冲突时说明后询问。本例展示单 Plan 的兼容路径 `.scratch/<feature>/plan.md`；多范围新文件用 `plans/<scope>.md`，远程每范围一个 Plan issue，方案保存在各自正文：
 
 - 技术决策表：选项、选择与理由
 - 包分解 P1..Pn：交付物、技术路径、复用点和风险
@@ -201,7 +201,7 @@ Agent 复用已有代码侦察结果。本地生成 `.scratch/<feature>/plan.md`
 
 现有挂接点在开工前核实；目标态在负责生成它的待办/前置包完成后检查。plan 由你 review 批准后进入拆票，已有会话授权直接沿用。plan 就地维护，方法名不复制进待办。
 
-远程 Plan issue 正文用 `Spec:` 关联当前执行版，Spec 正文用 `Plan:` 反向引用；拆票后 Plan 列出关联待办。评论记录讨论和批准依据，open/closed 不代替批准状态。草案先保存为待 review，批准后更新同一正文，不把现行 plan 放进 Spec 评论或另存本地副本。
+每个 Plan 用 Spec:／Scope: 关联适用版本与负责范围，Spec 用 Plans: 列完整实际引用，旧单 Plan: 兼容。拆票后各 Plan 只列自己的 Todo，批准与范围内验收分别记录；评论不是现行方案主存，open/closed 不是批准。每个范围复用同一正文，不另存远程方案的本地副本。
 
 Plan 的 `Parent:` 指向 Spec：本地更新同一 INDEX 的方案链接，GitHub 建立原生子 issue 并核对。tracker 已指定 Project 时加入同一个 Project，可用 View → Show hierarchy 查看层级；没有 Project 仍可继续普通 Issues 流程。
 
@@ -372,9 +372,9 @@ Agent 从最近的 Do、Todo 和 Plan/Spec 提取本轮测试范围，启动或�
 
 **已实现 spec 有变动时使用，不重走全流程。**
 
-只澄清变动部分 → 判断增量或重做 → 保存增量 Spec、更新当前版本引用 → 更新同一 plan 正文 → 续接待办。旧 Spec 冻结；本地用版本文件与 INDEX，远程沿用 tracker 的 Spec 版本约定并同步 Plan issue 的 `Spec:`，不新建 Plan issue。业务路径变化时更新功能流程图，模块影响保留文字说明。
+只澄清变动部分 → 判断受影响范围的增量或重做 → 保存 Spec 版本及当前 Plan 注册引用 → 就地更新受影响的方案 → 续接其简单 Todo。未受影响 Plan 的实现、批准、验收和历史票保留，核对明确的沿用依据；新独立范围可新增 Plan，不以新版本名复制已有范围。业务流程与模块影响只改实际变化部分。
 
-同步更新 Plan 的 `Parent:` 和导航，旧票保留原版本与状态。GitHub 新版 Spec 另建 issue 时，只在核实同 feature 的旧父级后迁移同一个 Plan；本地 INDEX 保留历史链接并追加新票。`/flow-status` 只读展示这棵树，状态仍从源文件/issue 读取。
+需要同步 Parent／Spec 导航时按同 feature、新鲜读取和实际授权处理，不因引用更新重置其他范围。旧票保留原版本和状态；INDEX／Spec 列全体适用 Plan 及各自 Todos。flow-status 逐 Plan 只读显示工程、关闭同步与验收，再汇总整个 Spec，不能从一个 Plan 的状态推断全体。
 
 ### `/flow-export` — 会话导出
 

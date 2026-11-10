@@ -123,10 +123,12 @@ Issues and specs for this repo live as markdown files in `.scratch/`.
 
 - One feature per directory: `.scratch/<feature-slug>/`
 - The spec is `.scratch/<feature-slug>/spec.md`
-- The implementation plan (when produced) is `.scratch/<feature-slug>/plan.md`
-- `.scratch/<feature-slug>/INDEX.md` is the feature navigation entry: current Spec, Plan, linked Todo hierarchy, and version history; create it when the first Spec or Todo is saved
+- A Spec may own one or several independent Plans: keep existing `.scratch/<feature>/plan.md`; new peer scopes use `.scratch/<feature>/plans/<scope-slug>.md`, one current artifact per scope
+- The Spec lists all actual references under Plans: (legacy singleton Plan: is compatible); each Plan records Parent:, Spec:, Scope:, its own approval/acceptance and Todos
+- AI chooses the number from scope/independence unless the user specifies count/grouping; honor that directive, reporting an actual independence/coverage conflict before choosing an alternative
+- `.scratch/<feature>/INDEX.md` links the current Spec, all applicable scoped Plans and each Plan's own Todos/version provenance; create it when the first Spec or Todo is saved
 - Keep `.scratch/README.md` linked to each feature INDEX; preserve existing explanations and history
-- Use Parent: for direct ownership (Spec → Plan → Todos; existing Epic optional); file references in metadata are relative to the feature directory
+- Use Parent: for direct ownership (Spec → peer Plans → each Plan's Todos; existing Epic optional); Todo numbering is feature-wide and metadata paths are feature-relative
 - INDEX links point to real files and do not duplicate Todo statuses or approval state; `/flow-status` reads those from the source files
 - Todos are one file each at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, with a [Todo] title; never combine them into a single file
 - Every Todo follows the fields and states declared in Todo conventions below
@@ -155,14 +157,15 @@ Issues and specs for this repo live in GitHub Issues on the connected remote. Us
 ## Artifact conventions
 
 - Spec、Plan、Todo 分别使用独立 issue；Plan issue 正文是现行技术方案，评论只记录讨论、批准依据和变更原因
-- Spec 正文用 Plan: 引用 Plan issue；Plan 正文用 Spec: 指向当前执行版 Spec，列出关联 Todos
-- Parent: 记录直接归属，并同步原生 Spec → Plan → Todos；已有 Epic 时作为 Spec 父级，不额外强制建单
+- Spec 正文用 Plans: 列出全部独立 Plan 的实际引用／范围，旧单 Plan: 兼容；每个 Plan issue 正文用 Spec:、Scope: 记录适用版本及负责范围，只列本 Plan 的 Todos
+- AI 按独立功能边界和耦合判断 Plan 数量；用户指定数量／分组优先，冲突时说明后询问，不用包编号或空壳凑数
+- Parent: 同步原生 Spec → 多个 Plan → 各自 Todos；每票只归属一个 Plan，已有 Epic 时作为 Spec 父级
 - 新标题使用 [Spec] / [Plan] / [Todo]，类型标签默认 spec / plan / todo；可沿用明确配置的等价标签，旧 ticket 仅作历史兼容，不用于新待办；标签或原生关系失败时如实报告，不重复创建 issue
 - 先探测当前 CLI 的层级能力，必要时用 gh api；父级冲突不强制替换，规格版本迁移按共享约定核对
 - Todo 分别填写 Spec: 和 Plan:，后者格式为 <Plan issue 引用> / P<N>
 - Plan 正文记录待 review / 已批准状态；open/closed 不是批准状态
-- /flow-amend 更新同一 Plan issue 正文及 Spec: 引用，不创建 plan-vN；Spec 版本定位沿用团队 tracker 约定
-- 远程 issue 是主存，不额外维护本地 plan.md 副本
+- /flow-amend 仅就地更新受影响的 Plan issue，不创建 plan-vN；未受影响范围保留明确沿用依据及原批准／验收，历史票不因版本号变化重写
+- 每个 Plan 独立维护范围内验收，Spec 汇总引用及真正全局验收项，不重复同一验收状态；远程 issue 是主存，不额外维护本地方案副本
 
 ## Optional Project
 

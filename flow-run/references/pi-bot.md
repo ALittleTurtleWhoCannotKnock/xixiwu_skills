@@ -67,6 +67,8 @@ PI-Bot's native job `completed` means the turn ended, including a turn that aske
 
 For interrupted or uncertain work, inspect the native session, job/receipt, artifacts, and previous outputs before any retry. The recovery center's continue/retry operations require host confirmation and may repeat earlier side effects. The skill cannot waive this host approval or promise tool-level exactly-once recovery. Prefer resuming the existing Bot conversation after a normal Spec reply. See [recovery.js](https://github.com/vsd269/PI-Bot/blob/da54ae7f1cab7739691a3c4fc638101fa01fe120/src/recovery.js) and the [execution architecture](https://github.com/vsd269/PI-Bot/blob/da54ae7f1cab7739691a3c4fc638101fa01fe120/docs/EXECUTION_ENGINE_ARCHITECTURE.md).
 
+Apply the generic Todo grouping rules. Small related Todos may share a Development Bot conversation and applicable checks. Several `message_bot` calls to the same Bot do not by themselves prove separate contexts or parallel execution; verify the installed host's actual session, job and directory capabilities first. Preserve its queueing rules when isolation is unavailable rather than inventing a session API or creating extra Bots without authorization.
+
 If later using multiple Bots, keep one workflow owner and delegate only concrete, self-contained work to existing capable workers. Use stable request IDs for the same dispatch, receive the automatic return, and inspect outputs; do not poll `check_delegation` in a loop or treat an accepted dispatch as tested completion. Do not change group membership, permissions, models, schedules, or other Bot instructions just to run flow-run.
 
 ## Browser and host limits

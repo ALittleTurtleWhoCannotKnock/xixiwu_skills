@@ -31,11 +31,11 @@ Read the [shared contract](../_agents/workflow-contract.md) and target tracker d
 
 Select a ticket with all declared blockers satisfied. The current flow releases dependencies on resolved; legacy code-complete follows only declared compatibility semantics and engineering evidence. Verify independent external conditions separately. Follow Spec/Plan references; an explicit none with a reason uses the confirmed small-ticket decisions, not missing-document requests.
 
-With a plan, read the authoritative local file or independent Plan issue body and P<N>, and verify approval evidence. Native closed state is not approval. Do not substitute a stale local copy or discussion comment for a remote master.
+Read the Todo's exact owning Plan file/issue and qualified P<N>, its Scope and actual approval. A peer Plan with the same package number or an approved neighboring scope is not a substitute. Closed state is not approval; do not use a stale copy/comment instead of the authoritative body.
 
 Before execution, change ready to claimed in the tracker and record the executor (locally `By: <agent/user>` may accompany Status). Do not take another executor's claim; only explicitly confirmed stale claims may be reassigned.
 
-For multiple Spec versions, read local INDEX or the remote current-version reference and compare the Plan's Spec. Select the current execution version, consulting older versions only for background.
+For multiple Spec versions, verify the selected Plan's current applicability from the Spec/INDEX registry and its scope/version evidence. An unaffected earlier binding may remain valid only with explicit unchanged-scope provenance; do not reject it or reimplement completed work solely for a global version bump. Changed/uncertain scope blocks only work relying on that unresolved provenance, not unrelated approved Plans.
 
 Resolve the [functional acceptance owner](../_agents/workflow-contract.md#功能验收与票级关闭): Plan, otherwise Spec. Separate human functional acceptance from engineering checks. Align completion conventions before adopting the new flow without resetting historical states. If the user is confirming functional acceptance and no execution work remains, go directly to Step 6 rather than redoing closed tickets.
 
@@ -49,17 +49,20 @@ Use the [shared validation rules](../_agents/workflow-contract.md#验证方式�
 
 ### Step 3: Execute and validate
 
+Before assigning implementation, the stage supervisor checks the [execution task](../_agents/workflow-contract.md#执行任务与Todo): can the executor identify its first action, prepared inputs, bounded result and completion checks without inventing product rules or choosing the feature architecture? If not, refine the task or return the consequential gap to its owner before dispatch. The supervisor may prepare several settled tasks for one Todo or group related small Todos; keep their ordinary internal execution in the same context when useful, without a Flow Agent round trip per step.
+
 Read execution-mode. Missing/invalid subagent/inline configuration defaults to subagent with a configuration notice; honor a task override. Apply the [selected-model rules](../_agents/workflow-contract.md#基础模型); inline keeps the main-session model.
 
 In subagent mode, send the implementer:
+- The specific execution task(s): result, available inputs and settled rules, prerequisites, permitted change boundary, and task-level completion checks/examples.
 - The current ticket reference/body, criteria, and blockers.
 - The shared contract and tracker state declaration, unless the adapter already appended the contract.
-- The referenced plan/P<N>, decisions, risks, and existing/target anchors. If intentionally omitted, use the ticket decisions and skip plan-anchor checks.
-- The current Spec version, seams, and boundaries, or confirmed small-ticket equivalents.
+- The exact owning Plan/Scope/P<N>, decisions, risks, and existing/target anchors. If intentionally omitted, use the ticket decisions and skip plan-anchor checks.
+- The applicable Spec version, seams and boundaries, including current unchanged-scope provenance for an earlier binding, or confirmed small-ticket equivalents.
 - Commit-strategy path, validation approach, code/test/fixture locations, and required commands.
 - The upper acceptance entry and pending human items, separated from mandatory ticket engineering checks.
 
-The implementer verifies blockers, reuses tests, implements/validates, reviews its diff, and reports real results and unmet criteria. Wait for its report. Resolve genuinely missing decisions with the user before redispatching. A reported wrong technical direction follows Step 3.5 rather than blind retries or abandonment.
+The implementer verifies blockers, executes only the prepared scope, reuses tests, implements/validates and reviews its diff. Inspect its result against the assigned task before advancing the sequence. An internal task may be complete while the Todo still has required work: keep the Todo incomplete until all its engineering criteria pass. Resolve consequential missing decisions with their owner before redispatching. A reported wrong technical direction follows Step 3.5 rather than blind retries or abandonment.
 
 Inline execution follows `_agents/implementer.prompt.md` directly. The same prompt/shared validation contract governs both modes.
 
@@ -68,7 +71,7 @@ Inline execution follows `_agents/implementer.prompt.md` directly. The same prom
 Use when the ticket's technical approach conflicts with actual architecture or when an anchor that should already exist has unexpectedly moved/disappeared. A future target not yet due is not an error; honor its creation phase.
 
 1. Inspect actual architecture, channels, flow, and boundaries. Explain why the assumption fails; locate unexpectedly renamed/moved symbols.
-2. Update the plan's technical entry/anchors first, or the small ticket's decisions when no plan exists. Revise affected ticket scope/criteria and add the old assumption, correction, and architectural evidence. Do not duplicate method anchors into the ticket.
+2. Update the owning Plan's technical entry/anchors first, or the small ticket's decisions when no plan exists. Revise affected ticket scope/criteria and add the old assumption, correction, and architectural evidence. Do not duplicate method anchors into the ticket or reset unrelated Plans.
 3. Determine whether to revise the Spec:
 
 | Correction | Meaning | Spec action |

@@ -20,7 +20,7 @@ Read this tracker's Status values dynamically. New defaults are ready/claimed/re
 ### Step 2: Discover features
 
 - Locally prefer `.scratch/README.md` links, or scan first-level directories for INDEX/spec/plan/issues. A named feature limits discovery to that feature. Show unregistered legacy work too; do not treat standalone Epic/notes folders as features.
-- Remotely follow declared feature/Spec → Plan/ticket references. Do not require `.scratch` or infer versions from issue numbers/comments.
+- Follow every current Spec `Plans:` entry or legacy singleton `Plan:`, locally through INDEX and actual files, remotely through declared references/native relationships. Do not silently select the first Plan. Unlisted files are not current merely by name or modification time.
 - For complex file discovery, scout may return paths only under execution-mode; the main session determines status. Inline or unavailable scout means direct inspection.
 
 ### Step 3: Read authoritative records
@@ -29,11 +29,11 @@ Locally inspect:
 1. INDEX, if present: current Spec/evolution and real navigation links. Cross-check body fields; the index does not prove ticket state or approval.
 2. The referenced Spec; without INDEX use spec.md or latest spec-vN.md.
 3. Individual issue files: declared Status, Parent, distinct Spec/Plan, dependencies, title/number. Infer missing Parent only from explicit Plan/Spec, label the inference, and never rewrite it. Support legacy `**来源**:`, `**依赖**:`, `**阻塞**:`; conflicting repeated fields make dependency status unknown, not silently ignored.
-4. Current plan: Parent/Spec, approval evidence, linked tickets, and functional acceptance. Plan owns Acceptance/user records, otherwise Spec; explicitly omitted documents are not required.
+4. Each current Plan: actual identity, Parent/Spec/Scope, approval evidence, own Todos and scoped acceptance. Qualify P<N> by its Plan. One Plan owns each Todo; intentionally omitted artifacts remain omitted.
 5. Generated contract filenames.
 6. Substantive un-ticketed feature documents, such as integration notes: list them without inventing status.
 
-Remotely read the current Spec/version entry, independent Plan body, tickets, and contracts. Verify current-version provenance against the Plan's Spec; a package number is not a Spec version. Report a legacy plan found only in Spec comments and its migration recommendation without migrating it. Report missing masters or conflicting provenance.
+Read all applicable Plan bodies and their own Todo/contract records. Verify scope/version applicability against the current Spec registry/change evidence. An unaffected Plan may retain an earlier binding with explicit unchanged-scope provenance; neither silently accept all older versions nor mark every peer stale after an unrelated Spec change. Report old comment-only plans/missing or conflicting sources without migrating them.
 
 On GitHub, read actual parent/sub-issues and compare them with body references. Use supported APIs when the CLI lacks fields. Permission/query failures are unknown, not evidence of no parent. On GitLab use its actual capabilities. List conflicting sources/values without fixing relationships, labels, or indexes.
 
@@ -53,13 +53,13 @@ Include closed tickets: read linked tickets individually or use queries such as 
 | active | ready / claimed | Available/in progress |
 | unknown | Missing/out-of-range | Incomplete state data |
 
-Version continuation is **not Parent ownership**. Historical tickets retain their states as references; new-version tickets belong to the Plan/fallback, not the old ticket. Select Next only from the current Spec execution layer. Historical code-complete/parked references are not anomalies merely because they remain open.
+Version continuation is **not Parent ownership**. Historical Todos retain their states; new work belongs to its actual Plan/fallback. Select Next from each Plan's verified applicable scope/version, including explicitly unchanged scope evidence. Do not equate P1 under two Plans or count a peer's completed Todo as this Plan's work. Historical code-complete/parked references are not anomalies merely because they remain open.
 
 **Dependencies:** done releases them under the tracker, with external conditions checked separately. Legacy code-complete releases only when explicitly allowed and supported by engineering evidence; warn that the old ticket is not fully closed. Parked/unknown do not release. Unverifiable external conditions (samples, phase-start approval, etc.) remain warnings/blockers.
 
 ### Step 4: Determine stage
 
-Apply this priority to the current execution layer; list history separately:
+Apply this priority to each current Plan's execution layer; list history separately. Report mixed Plan states instead of one misleading global stage. One pending/unapproved/blocked Plan does not make another approved independent scope ineligible. Then summarize Spec coverage, outstanding Plans and distinct global checks; a user-specified count alone does not prove all scopes are covered or approved.
 
 | Condition | Stage |
 |-----------|-------|
@@ -73,18 +73,18 @@ Apply this priority to the current execution layer; list history separately:
 | All execution tickets resolved but native closure unsynchronized | Engineering complete/closure sync pending; show acceptance separately |
 | All resolved, Acceptance pending | Engineering complete/awaiting functional acceptance |
 | All resolved, changes-requested | Functional acceptance requires adjustment/follow-on work |
-| All resolved, accepted with current-version user evidence | Functionally accepted |
+| All resolved, accepted with applicable-scope user evidence | Functionally accepted |
 | All resolved, both Spec/Plan intentionally omitted | Engineering complete/no independent functional acceptance declared |
 | All resolved, acceptance state/evidence missing | Engineering complete/acceptance record incomplete |
 | No tickets, Spec without plan | Awaiting blueprint or intentional small-ticket path |
 | No tickets, plan unapproved | Awaiting plan review |
 | No tickets, plan approved | Awaiting ticketing |
 
-Explicit none/reason with complete small-ticket decisions is valid. Plan approval comes from its stamp and user evidence, not native closed state. Show a claimed ticket's executor; multiple claims get a concurrency notice.
+Explicit none/reason with complete small-ticket decisions is valid. Plan approval comes from its stamp and applicable user/delegated review evidence, not native closed state. Show a claimed ticket's executor; multiple claims get a concurrency notice.
 
 ### Step 5: Report
 
-First emit **Hierarchy** as clickable nested Markdown: explicitly identified Epic → Spec → Plan → Todos. Use Todo names for report groups while preserving actual linked titles, including legacy Ticket items. Discover both `todo` and legacy `ticket` types under the shared contract. Link actual local files or issue URLs; label package, Spec version, actual Status, and historical tickets. Omit intentionally absent levels. P<N> is grouping, not an extra issue. Mark inferred/unsynchronized native relationships as such rather than presenting an unverified tree as fact.
+First emit clickable **Hierarchy**: Epic → Spec → all current peer Plans → each Plan's own Todos. Include each scope/applicable Spec version and per-Plan approval, engineering/closure and acceptance facts from their owners. Preserve legacy names and discover both todo/ticket aliases. Omit intentionally absent levels; P<N> is internal grouping. Label inferred or unsynchronized native relationships rather than presenting them as verified.
 
 Then report separate categories/current-versus-history counts. Native child-close percentages do not replace engineering or acceptance state. Snapshot example:
 
@@ -93,8 +93,8 @@ Feature: <feature>
 Tracker: local markdown / GitHub / GitLab
 Stage: <阶段>
 Spec: <当前 spec 文件/issue 版本引用或 unknown>
-Plan: <现行 plan 文件/独立 issue（已批准/待 review）或 无>
-Acceptance: <Plan/Spec 入口；pending / accepted / changes-requested / unknown / 未声明>
+Plans: <每个现行 Plan 引用、Scope、适用 Spec 版本及批准状态；旧单 Plan 亦可>
+Acceptance: <逐 Plan 范围及 Spec 全局项的真实入口／状态，不能由数量推断>
 Closure sync: <本地 resolved 即关闭；或远程 closed / 关闭未同步 / unknown>
 
 Progress: <n> resolved / <n> code-complete / <n> parked / <n> active / <n> unknown（共 <total>）
@@ -115,7 +115,7 @@ Contracts:
 - <ticket-contract-file>
 
 Next:
-- <执行层中依赖已解除且引用方案已批准的唯一可执行 ready Todo；明确省略 plan 时按简化规则>
+- <按实际 Plan 分组列出依赖已解除、方案已批准的可执行 ready Todos；明确省略 plan 时按简化规则>
 - 老版本遗留的 ready 照列但标注其外部阻塞，不冒充“立即能做”
 - 没有可执行 Todo 时明确说明原因
 
@@ -139,4 +139,4 @@ grid-chain                      状态不完整   1/3 resolved + 1 unknown      
 
 ## Constraints
 
-This is an observation view, not a state manager. Never edit records to make progress look complete. Keep legacy intermediates, resolved, engineering closure, approach approval, Git authorization, and user functional acceptance distinct. Show unknown and reasons when evidence is insufficient. If there is no uniquely executable ready ticket, explain instead of choosing arbitrarily. Recommend a ticket for substantive untracked work in Warnings only, without creating it.
+This is an observation view, not a state manager. Never edit records to make progress look complete. Keep legacy intermediates, engineering/closure, per-Plan approval, Git authorization and scoped human acceptance distinct. Show verified eligible groups per Plan rather than arbitrarily choosing one; explain unknown ownership/provenance or the absence of eligible work. Recommend a Todo for substantive untracked work without creating it.

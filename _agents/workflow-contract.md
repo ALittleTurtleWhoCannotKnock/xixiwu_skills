@@ -4,6 +4,32 @@ Workflow skills and the implementer share these field formats/default semantics.
 
 Resolve interaction/artifact preferences from the target repository's language.md using the supervisor-supplied or adapter-appended policy (`_agents/language-policy.md`). Ordinary work may use a temporary fallback for missing preferences, without saving inferred defaults.
 
+<a name="执行任务与Todo"></a>
+## Prepare simple Todos before dispatch
+
+The main decomposition is **Spec → one or more independent Plans → simple Todos**. A Plan owns an independently deliverable scope; each Todo owns one clear engineering result within that Plan. A Todo need not deliver every application layer or a complete user-facing feature on its own. If it still mixes several difficult results, refine it into simpler Todos instead of leaving the main decomposition to the executor. Ordinary coding steps remain inside a Todo, and related small Todos may share an assignment/session; no extra task-document layer is required.
+
+Before dispatch, the planning owner or stage supervisor prepares enough detail for the executor to identify:
+- the concrete result it must produce, including the part of the parent Todo it covers;
+- the available inputs, settled rules, prerequisites and relevant current code/Plan references;
+- the permitted change boundary and what remains outside this task;
+- the checks or examples that establish this task's completion.
+
+The executor still chooses routine local coding details. It should not receive an undivided feature goal that requires it to clarify product policy, choose the architecture, decompose the work and implement everything in the same assignment. If an unknown can change the task's inputs, approach or scope, first assign a focused investigation, then have the appropriate decision owner settle it before dependent implementation. Routine source lookup within a settled task stays with the executor.
+
+Split until the next action and result are clear, not to a fixed number of tasks, files or functions. Ready related tasks may execute together without returning to the Flow Agent after every internal step; independent groups still require actual host/working-directory support for parallelism. Completing an execution task proves only its assigned scope. Resolve a Todo only after its full engineering criteria, required checks, review and deliverables pass.
+
+<a name="Spec与多个Plan"></a>
+## Spec to independent Plans
+
+- When a Plan is needed, choose one or more peer Plans from the confirmed Spec's functional boundaries, coupling, change scope and independent verification. Keep a simple/coupled requirement in one Plan; split a complex requirement when it has independently deliverable scopes. Explain the chosen count and boundaries briefly, without adding a separate count-approval round.
+- An explicit user count or grouping takes precedence over the AI's preferred split. Produce that many actual Plan artifacts, not one Plan containing that many P<N> packages. If the count/grouping conflicts with complete coverage, nonempty scopes or independence, explain the concrete conflict and ask before choosing an alternative; do not silently change the number, omit work or create empty Plans.
+- Peer Plans collectively cover the confirmed implementation scope without duplicate ownership. Each must be implementable and verifiable from the agreed baseline/stable existing contracts, without another new peer Plan's output as a prerequisite. Do not split frontend/backend/testing phases into nominally independent Plans. Resolve shared-contract changes and overlapping mutable boundaries before claiming independence; do not hide cross-Plan coupling in Todo blockers. Independence does not bypass runtime locks, shared-file conflicts or Git permissions.
+- Each Plan records `Parent:` (the Spec), `Spec:` (its applicable version), and `Scope:` (the owned requirement/acceptance subset, using actual criteria or section references). It owns its technical review, Todos and scoped functional acceptance. A legacy singleton without Scope may cover the whole Spec when unambiguous. P<N> is internal to one Plan; always qualify it with the Plan file/issue.
+- The Spec lists current Plan references and scopes under `Plans:`; legacy singleton `Plan:` remains valid. Read both forms and deduplicate by actual identity; conflicting listings require reconciliation. Reuse an existing Plan by its Spec identity and scope, not only by title/count. Re-running planning does not create duplicates; a requested repartition must account for existing scopes, claims and completed work before changing ownership.
+- When Plan writers run separately, each owns its scoped body; designate one coordinator to merge the Spec/INDEX Plan list from fresh sources without losing peer references. Do not let concurrent writers replace the registry with only their own Plan.
+- Change only affected Plan decisions, approval/acceptance and Todos. An unaffected Plan may retain an earlier Spec binding when the current confirmed change record explicitly proves its scope/contracts remain unchanged; an older version alone is neither invalid nor sufficient evidence of validity. Navigation-only reference updates do not reset review or acceptance. Historical Todo versions/states are not rewritten merely because another Plan changed.
+
 <a name="基础模型"></a>
 ## Base model
 
@@ -20,18 +46,18 @@ Read the tracker declaration. Each artifact has one current authoritative store:
 | Artifact | Local tracker | GitHub/GitLab tracker |
 |----------|---------------|----------------------|
 | Spec | `.scratch/<feature>/spec.md` or version file | Spec issue under the declared version convention |
-| Plan | `.scratch/<feature>/plan.md` | Independent Plan issue, current approach in its body |
+| Plans | Existing singleton `plan.md`; new peer scopes use `.scratch/<feature>/plans/<scope-slug>.md` | One independent issue per Plan/scope, current approach in its body |
 | Todo | `.scratch/<feature>/issues/<NN>-<slug>.md` | One independent issue each |
 
 Execution artifacts are **Todos (待办)**. Use `Todo`/`Todos` in new titles, document headings, Plan lists, INDEX navigation, and status reports. Internal references to a “ticket” mean this same artifact; existing paths, protocol fields, state values, and `per-ticket` configuration remain unchanged.
 
 Legacy `[Ticket]` titles, `ticket` type labels, and Ticket-based tracker examples remain readable aliases, not the naming for new Todos. Match existing work by provenance and scope, including both `todo` and legacy `ticket` results when filtering by type and deduplicating by issue identity. Reuse matching items without bulk-renaming/relabeling history or recreating issues to adopt the new name.
 
-- Remote Plan titles may use `[Plan] <Feature> 实施蓝图`. Its `Spec:` identifies the current execution Spec; the Spec backlinks `Plan:`, and the Plan lists tickets. Query existing references and update the same Plan rather than duplicating it.
-- Tickets separate Spec version from Plan package. Local example: `Plan: plan.md#P2`; remote: `Plan: #101 / P2`, with full URLs across repositories. P2 is a logical body package, not a platform-generated Markdown anchor.
+- Remote titles may use `[Plan] <Feature> — <Scope> 实施蓝图`. Each Plan's `Spec:` identifies its applicable version; the Spec backlinks all current Plans, and each Plan lists only its own Todos. Reuse the same artifact for the same scope rather than duplicating it.
+- Tickets separate Spec version from qualified Plan/package identity. Local examples: `Plan: plans/import.md#P1` or legacy `plan.md#P2`; remotely `Plan: #101 / P1`, with full URLs across repositories. P1 in another Plan is a different package, not the same execution source.
 - Keep the remote current plan out of Spec comments and avoid a second local master. Comments hold discussion, approval evidence, and change reasons; the body holds the approach and `**状态**: 待 review` or `**状态**: 已批准（日期）`.
 - Native open/closed does not establish plan approval or remove execution restrictions. Read the stamp and actual authorization.
-- `/flow-amend` updates this same Plan body/Spec reference, not plan-vN. Retain the tracker's Spec-version convention; issue numbers do not determine versions.
+- `/flow-amend` updates the same affected Plan artifacts, not plan-vN, preserving unaffected scopes. A confirmed new independent scope may add a Plan under the count/grouping rules. Retain the Spec-version convention; issue numbers do not determine versions.
 - When continuing an old comment-only plan, migrate its current content into an independent issue, retain history/evidence, and update touched references. Read-only queries only recommend migration.
 
 Optional Spec HTML is a derived reading snapshot; `/flow-spec` asks per invocation and generates it only when requested. The Markdown file or remote issue remains authoritative, including approval/acceptance. Link only actual files or verified, authorized deployed pages, and keep source/version provenance. If a touched Spec changes, refresh HTML only when the request includes it, or mark/remove its current-reading link as stale while preserving the historical file. Existing HTML alone is not consent for new generation or publication.
@@ -39,7 +65,7 @@ Optional Spec HTML is a derived reading snapshot; `/flow-spec` asks per invocati
 <a name="归属层级与列表展示"></a>
 ## Ownership and navigation
 
-Default hierarchy: **Spec → Plan → Todos**. Link an explicitly identified Epic above the Spec, without manufacturing an extra parent. Parent identifies direct ownership, Spec the exact version, Plan the approach/package, and Blocked by execution dependencies; they are distinct.
+Default hierarchy: **Spec → Plans (1:N) → Todos (1:N per Plan)**. Link an explicitly identified Epic above the Spec, without manufacturing an extra parent. Parent identifies direct ownership, Spec the applicable version, Plan the specific approach/package, and Blocked by execution dependencies; they are distinct. Each Todo has one direct Plan owner, not every Plan in the feature.
 
 | Artifact | Parent reference |
 |----------|------------------|
@@ -51,8 +77,8 @@ Infer missing legacy Parent only from explicit Plan/Spec and label the inference
 
 ### Local files
 
-- Retain flat spec*.md, the same plan.md, and issues/<NN>-<slug>.md. Do not move files or create package directories to mimic the tree. Metadata paths are relative to the feature directory.
-- Create/update feature INDEX when the first Spec or ticket is saved, then synchronize touched relationships when planning, ticketing, or amending. Keep the current Spec, same Plan, nested ticket links, and evolution history. P<N> is optional grouping, not another document parent.
+- Retain flat spec*.md, existing plan.md and issues/<NN>-<slug>.md. New peer scopes may use plans/<scope-slug>.md; do not move old artifacts or create P<N> package directories merely to mimic the tree. Metadata paths remain feature-relative; Markdown links resolve from their containing file.
+- Create/update feature INDEX when the first Spec or Todo is saved, then synchronize touched relationships. List every current Plan with its own nested Todos and applicable Spec provenance, preserving history. Continue Todo numbering across the feature to avoid per-Plan collisions. P<N> is internal grouping, not another parent or a substitute for a separate Plan.
 - INDEX Markdown links are relative to INDEX and must locate real files. Missing/intentionally omitted artifacts use none/reason rather than placeholders or broken links. Label historical versions/tickets; all tickets on one Plan are not necessarily the current execution layer.
 - INDEX is navigation/current-version provenance, not copied plan text, ticket Status, or approval. Read state from originals. Reread relevant references before writes and report concurrent conflicts rather than overwriting.
 - Root `.scratch/README.md` links features to their INDEX, preserving other notes. Legacy work without INDEX may link its directory. Queries do not create indexes.
@@ -86,9 +112,9 @@ Plan: [plan.md](plan.md)
 
 ### Version evolution and state
 
-`/flow-amend` preserves one Plan. New Specs inherit the confirmed Epic; update Plan Spec/Parent to the current version. Preserve existing ticket versions/states and attach new tickets to the same Plan.
+`/flow-amend` preserves each existing Plan's identity and changes only affected scopes. The current Spec/INDEX lists all applicable Plans, including explicitly unchanged scopes. Update affected Plan Spec/Parent references; navigation-only updates to other Plans are allowed when needed but do not reset their decisions, approval, acceptance or completed work. Preserve historical Todo versions/states and attach new Todos to their actual owning Plan.
 
-If Spec versions share one issue, native Plan parenting is unchanged. If a version gets a new Spec issue, reparent only after confirming the old parent equals the prior Spec read for this same feature, the change is approved, and a fresh read shows no concurrent change. Do not move historical tickets or replace an unexplained parent; stop/report conflicts.
+If Spec versions share one issue, native Plan parenting is unchanged. If a version gets a new Spec issue, migrate current Plan navigation only after verifying each old parent equals the prior Spec of this same feature, the move is authorized, and a fresh read shows no concurrent change. Historical Todos keep their owner/version. An explicitly unchanged Plan may retain its earlier binding with current-scope provenance; report the actual native relationship rather than pretending every parent migrated.
 
 Tree shape, child-close ratios, and folder layout prove neither approach approval nor functional acceptance. Do not close parents, promote state, or release dependencies on that basis. `/flow-status` reports actual version/state/relationship conflicts without repairing them.
 
@@ -161,11 +187,11 @@ New trackers default to ready/claimed/resolved/parked and `ready → claimed →
 <a name="功能验收与票级关闭"></a>
 ## Functional acceptance and ticket closure
 
-- Human product/experience/end-to-end acceptance belongs to the current Plan, otherwise current Spec. Maintain one state and link other entries to it. When both are intentionally omitted, keep human follow-up in an existing feature record/report without manufacturing documents or blocking engineering closure.
-- The owner records `Acceptance: pending / accepted / changes-requested`, items, linked tickets, and user confirmation/feedback. Plan approach approval (`待 review`/`已批准`) is not functional acceptance. If a later Plan replaces Spec-owned acceptance, transfer current records and leave a pointer, retaining history instead of duplicate states.
+- Human acceptance for a Todo belongs to its owning Plan's scope, otherwise the current Spec. Multiple Plans own separate acceptance subsets and may be reviewed/accepted independently; one blocked Plan does not undo another's accepted scope. Each acceptance item has one mutable owner. The Spec links these entries and derives overall coverage; retain genuinely Spec-wide integration/acceptance items there without duplicating Plan-owned states. When both are intentionally omitted, keep human follow-up in an existing feature record/report.
+- Each owner records `Acceptance: pending / accepted / changes-requested`, its scoped items, Todo links and actual user evidence. Technical approval, a requested Plan count and Git authorization are not functional acceptance. Transfer only the corresponding Spec-owned items when a Plan takes ownership; preserve records and leave links, not duplicate independent states. A user review may cover several Plans explicitly without requiring a separate conversation per Plan.
 - Hand off human experience/functional-device checks with their source tickets and unverified facts. Do not move failed/unrun automated, integration, or explicitly required engineering-device checks upward under another name. Report engineering and human acceptance independently.
-- All tickets resolved means engineering complete/awaiting functional acceptance, not automatic accepted/parent closure. Only explicit user functional acceptance plus completed relevant engineering work records accepted and evidence. Locally that ends acceptance without changing plan approach approval; remotely close and verify that acceptance issue separately. Do not cascade to broader Epic/Spec scope.
-- User-reported issues record changes-requested and keep the parent open. Add scoped follow-on work or reopen a specifically identified regression, not all historical tickets. Changed acceptance scope during /flow-amend resets pending while retaining prior records; old accepted state does not cover a new version.
+- For each Plan, its own Todos resolved means scoped engineering completion, not automatic acceptance or peer/Spec closure. Only actual user functional acceptance plus relevant engineering completion records accepted at that owner. Close/verify that scoped acceptance issue separately; the whole Spec still needs full coverage, distinct global checks and applicable user/closure authority.
+- User-reported issues record changes-requested at the affected scope. Add scoped follow-on work or reopen a specific regression, not all historical Todos. /flow-amend resets only changed acceptance scope while retaining prior evidence; verify unchanged-scope provenance before carrying other Plans forward. Counts or all child issues closing do not alone authorize closing the whole Spec.
 - `/flow-status` reports engineering progress, native closure sync, and acceptance separately. Missing Acceptance/evidence remains unknown; child counts, approach approval, Git activity, or closed parents do not prove user acceptance. INDEX remains navigation only.
 
 <a name="改动规模与输入"></a>

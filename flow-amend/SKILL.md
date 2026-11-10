@@ -1,6 +1,6 @@
 ---
 name: flow-amend
-description: "Handle confirmed changes to an implemented feature with an incremental Spec version, current-version index, the same updated plan, and follow-on tickets. Check whether the change actually requires redesign; keep the interactive decisions in the main session."
+description: "Handle confirmed changes to an implemented feature with an incremental Spec version, scoped updates to affected Plans and follow-on Todos. Preserve independent unaffected Plans and check whether the change requires redesign."
 ---
 
 # Flow Amend
@@ -11,7 +11,7 @@ Evolve an implemented feature incrementally from its existing Spec rather than r
 
 ## When to use
 
-- Existing Spec/tickets were implemented and committed.
+- Existing Spec/Todos were implemented; Git commit status is tracked separately.
 - Fields, behavior, boundaries, or local requirements change.
 - Repeating the complete requirements workflow would be disproportionate.
 
@@ -21,7 +21,7 @@ Evolve an implemented feature incrementally from its existing Spec rather than r
 2. Distinguish an increment from a redesign; small patches must not conceal a fundamental change.
 3. Freeze old Specs; write a separate version such as spec-v2.md.
 4. Use the latest execution version, referring to history as needed.
-5. Update the same local plan.md or independent Plan issue body, not plan-vN or Spec comments.
+5. Reuse each affected scoped Plan artifact, not plan-vN or Spec comments; preserve unaffected peer Plans.
 6. Before classifying depth, briefly steelman the change's true intent: restate it, examine both directions, and find decisive variables. Apply the global AGENTS.md significance criteria, including architecture, scope, cross-module impact, alternatives, user behavior, and irreversibility.
 
 ## Workflow
@@ -30,7 +30,7 @@ Evolve an implemented feature incrementally from its existing Spec rather than r
 
 Read the [shared contract](../_agents/workflow-contract.md), tracker, and execution-mode (missing defaults to subagent for later scout work).
 
-Locally inspect `.scratch/<feature>/INDEX.md` if present, the current spec.md/spec-vN.md, and existing issue numbers. Remotely read the current Spec version, independent Plan, and tickets; verify the tracker's current-version reference against the Plan's `Spec:`. Missing `.scratch` does not mean a remote Spec is absent. If neither mode has a locatable Spec, use the normal requirements workflow.
+Read INDEX/current Spec and all `Plans:` or legacy `Plan:` references, their Scope/version bindings, own Todos and existing approval/acceptance. Identify which confirmed change affects which Plan's requirements, contracts or mutable anchors; do not treat all peers as affected by default. Record unchanged-scope evidence for peers carried forward under an earlier binding. Missing local .scratch does not imply a remote artifact is absent. If no Spec is locatable, use the requirements workflow.
 
 ### Step 2: Discuss only the change
 
@@ -45,6 +45,8 @@ Do not repeat unchanged requirements. Example:
 ```
 
 ### Step 3: Confirm depth
+
+Classify depth for the affected scope. A redesign inside one independent Plan does not by itself invalidate unrelated Plan scopes; verify actual shared contracts/anchors before expanding the impact or resetting peer approval/acceptance.
 
 Classify the change and present the judgment:
 
@@ -73,7 +75,7 @@ For an increment, create local `spec-v(N+1).md`; remotely retain the tracker's e
 # <Feature> Spec v(N+1)
 
 Parent: <沿用已确认的 Epic；没有则 none>
-Plan: <既有 Plan 文件/issue 引用；没有则 none>
+Plans: <全部适用 Plan 的真实引用与负责范围；无则 none，旧单 Plan: 兼容>
 
 > 本版本是对 v(N) 的增量变更，只记录变动点。完整背景见 v(N)。
 
@@ -108,9 +110,9 @@ Create/update local INDEX's current version and evolution history while retainin
 ```markdown
 # Feature: <feature>
 
-**当前版本**: [spec-v(N+1).md](spec-v(N+1).md)（agent 实现一律读这个）
+**当前版本**: [spec-v(N+1).md](spec-v(N+1).md)（执行前核对本版本及各 Plan 的适用范围／版本）
 
-Plan: [plan.md](plan.md)（仅已有 Plan 时保留此链接）
+Plans: <保留所有适用 Plan 及其当前范围／版本引用；旧 plan.md 可继续使用>
 
 ## 层级
 [保留既有链接，标记当前规格及历史票版本；Step 6 保存新票后追加其真实链接，不重复保存状态]
@@ -121,25 +123,25 @@ Plan: [plan.md](plan.md)（仅已有 Plan 时保留此链接）
 - v(N+1) (spec-v(N+1).md): [本次变动概括]（进行中）
 ```
 
-Remotely update the existing current-version entry and synchronize the Plan's `Spec:` in Step 5.5. Do not create a local INDEX master. If version provenance cannot be located, report it rather than guessing from the newest comment or largest issue number.
+Update the existing current-version entry with all applicable Plan references, changed scopes and explicit unchanged-scope provenance. Synchronize affected Plan bindings in Step 5.5; unchanged peers may retain valid earlier bindings. Do not create a local INDEX master for a remote tracker. Missing provenance is reported, not guessed from the largest issue number/newest comment.
 
-The current entry must reference this confirmed Spec. Before writing, reread INDEX/the remote current-version entry and the Plan's `Spec:`; compare with Step 1. On concurrent changes, stop overwriting and report both values.
+The current entry must reference this confirmed Spec. Before writes, reread the entry and relevant Plan scope/version/parent facts against Step 1. Do not overwrite concurrent repartitioning or silently drop a peer from the registry; report the actual conflict.
 
-### Step 5.5: Update the same plan
+### Step 5.5: Update affected Plans in place
 
-Update the same plan.md or independent Plan issue body:
-- Revise affected technical decisions and explain which v(N+1) change caused them.
-- Revise affected package paths/risks and update method anchors as symbols move. Preserve anchors as the location source; append new package numbers rather than renumbering history.
-- Even if only product boundaries changed, update the Plan's `Spec:` to the new version.
-- The new Spec inherits the confirmed Epic; synchronize the Plan's `Parent:`. For a new GitHub Spec issue, verify the old parent and same-feature evidence under the shared migration rule before moving the same Plan. Report conflicts without forcing a reparent or moving old tickets.
-- Add the lightweight change stamp `> 更新：v(N+1) [日期] [一句话]`, preserving history while the body stays current.
-- When functional acceptance scope changes, reset the sole acceptance owner (Plan, otherwise Spec) to pending, retaining prior version records. Engineering tickets still close automatically; earlier accepted state is not acceptance of the new scope.
+For each affected scope, reuse its actual Plan file/issue and qualified packages:
+- Revise the decisions, paths/anchors, risks and simple-Todo decomposition caused by the change. Preserve history and target-creation phases; do not renumber unrelated packages.
+- Bind the changed scope to the confirmed new Spec version. Synchronize authorized Parent/navigation changes under the same-feature fresh-read rules; do not force a foreign parent or move historical Todos.
+- Add a brief version/change reason. Review new technical choices under actual user/delegated authority; changed scope does not inherit unrelated approval automatically.
+- Reset acceptance only for changed functional items, retaining their prior user evidence. Preserve peer approval, accepted scope and completed Todos. Reference-only navigation updates do not reset those states.
 
-New tickets reference this same plan and P<N>. Preserve target-creation phases. Reuse valid approval for the current approach; review out-of-scope new technical choices before updating approval. Comments hold discussion/evidence, not the authoritative plan.
+For unaffected Plans, record the scope/contract comparison in the current change entry and leave their implementation decisions, approval/acceptance and Todos intact. Do not reopen, re-review or recreate their work merely for the global Spec version bump. A genuinely new independent scope may add a Plan using AI-selected boundaries or the user's explicit count/grouping; do not duplicate or overlap existing current scopes. Repartitioning active/claimed work needs actual ownership reconciliation, not a silent reparent.
+
+New Todos belong to the particular affected/new Plan and its P<N>. Keep approaches in each body; comments hold discussion/evidence.
 
 ### Step 6: Add follow-on tickets
 
-Locally continue numbering after the highest existing ticket; remotely use returned issue numbers and backlink them in the same Plan. Start at `Status: ready` and preserve old resolved tickets.
+Continue local numbering after the highest Todo across the feature, not separately per Plan. Remotely use returned IDs. Backlink each new Todo only in its actual owning Plan/INDEX branch, start ready and preserve historical resolved work.
 
 ```
 issues/
@@ -149,18 +151,18 @@ issues/
 └── 04-yyy.md  (新，ready)   ← 本次变动
 ```
 
-Keep `Spec:` and `Plan:` separate: locally `spec-v(N+1).md` / `plan.md#P<N>`, remotely the Spec-version reference / Plan issue and P<N>. If a plan is unnecessary, declare `Plan: none (原因)` and include necessary decisions. Use `Blocked by:` for dependencies.
+Keep Spec provenance separate from the qualified Plan, e.g. `Spec: spec-v2.md`, `Plan: plans/import.md#P1` or the actual remote Plan issue/P<N>. Legacy plan.md remains valid. Preserve explicit small-change omissions. Blockers within a Plan must be real; a new peer-Plan dependency requires revisiting the independent partition rather than hiding it in a Todo.
 
-A new ticket's `Parent:` is the same Plan or the shared fallback, **not the old ticket it continues**. Use the shared Todo naming for new titles, type labels, and navigation. Maintain local INDEX/root navigation or remote native relationships/type labels. Use only a configured Project. Do not rewrite historical ticket versions, parents, or states because the current Spec changed.
+A new Todo's Parent is its actual Plan or declared fallback, not the old Todo it continues or an arbitrary peer Plan. Maintain real local/native navigation and type labels using only configured Projects. Do not rewrite historical versions, parents or states merely for a Spec change.
 
 ### Step 7: Hand off to implementation
 
-Use `/flow-do` when new tickets are ready. It reads INDEX/the remote current reference, checks the Plan's `Spec:`, and uses v(N+1), referring back to v(N) for context.
+Use flow-do for verified eligible Todos in the affected/new Plans. It follows each exact owner, qualified package and applicable scope/version. Unaffected independent Plans can continue under their valid provenance; do not require them to wait for this changed Plan's review or implementation.
 
 ## Outputs
 
 - A locatable incremental Spec version and updated current-version/evolution entry.
-- The same plan updated in place.
+- A complete current Plan registry with only affected scoped artifacts changed and any justified new independent Plan added.
 - New, sequentially numbered tickets with distinct Spec/Plan provenance.
 
 ## Boundaries and related stages
