@@ -11,7 +11,7 @@ When the user configures specialist agents/Bots or asks for stage delegation, lo
 
 ## Operating agreement
 
-The default profile has one routine human gate: **confirm the current Spec**. The user's end-to-end request delegates routine technical planning, Todo granularity/dependencies, implementation, and verification within that confirmed scope. State this agreement on first entry; explicit narrower instructions win. Record the actual request or user-authorized bot policy as the delegation evidence. Loading this skill, a bot-generated approval stamp, or an unrelated old approval supplies no authority by itself.
+The default profile has one routine human gate: **confirm the current Spec**. The user's end-to-end request delegates routine Plan partitioning/review, Todo granularity/dependencies, implementation and verification within that confirmed scope. The AI chooses one or several independent Plans unless the user specifies a count/grouping; the user's directive wins under the shared feasibility rules. State this agreement on first entry; narrower instructions win. Record the actual authority rather than inferring it from a loaded skill or bot-written stamp.
 
 Carry this user-authorized policy in each stage assignment as task context, without rewriting the leaf skills. It permits technical Plan review and Todo granularity decisions after human Spec confirmation; standalone leaf use keeps its existing review rules. The delegated reviewer must inspect actual facts, scope, risks, and checks, then record `**状态**: 已批准（授权自动规划，<日期>）` with the authority and confirmed Spec references. It must not invent a human review. Missing delegation retains the ordinary human approval gate.
 
@@ -30,17 +30,17 @@ For a new feature with an unambiguous target, start the first missing stage. For
 
 ## 2. Advance the first unmet stage
 
-The table identifies stage work. In team mode, dispatch it to the corresponding bound role and review its return before advancing; do not perform a specialist's task merely because the column names its skill. Only the Flow Agent forwards questions/Spec reviews to the user and relays the complete answer back to the originating task.
+Read all current `Plans:`/legacy `Plan:` references and their scopes. After the applicable Spec gate, evaluate the table per Plan: an approved independent Plan can proceed while a peer waits for review or a blocker; never treat the first Plan or its P1 as the entire requirement. In team mode, dispatch to the bound role and inspect the return. Only the Flow Agent forwards user questions/reviews and relays the full answer. If a conflict reveals actual cross-Plan coupling, revisit the partition rather than pretending the Plans are independent.
 
 | Actual condition | Action and handoff |
 |------------------|--------------------|
 | Material product ambiguity | [flow-clarify](../flow-clarify/SKILL.md); ask only questions the request, glossary, and existing evidence cannot resolve. Record confirmed terms; do not invent business answers for unattended progress. |
 | Aligned requirement, no current confirmed Spec | [flow-spec](../flow-spec/SKILL.md); save a reviewable Spec and **wait for human confirmation**. |
-| Confirmed current Spec, no adequate current Plan | [flow-plan](../flow-plan/SKILL.md); decide/review technical approach under the recorded delegation, save the same Plan with an accurate delegated approval record, then continue. |
-| Current approved/delegated Plan, missing execution slices | [flow-todo](../flow-todo/SKILL.md); decide granularity within the Plan, reuse matching new/legacy Todos, create only missing slices, then continue. |
-| Executable current Todo | [flow-do](../flow-do/SKILL.md); implement and review required evidence, produce required API fragments, resolve/close engineering-complete Todos, then re-read dependencies and choose the next eligible Todo. |
-| Current Todos engineering-complete | For a user-facing browser feature, [flow-e2e](../flow-e2e/SKILL.md) once for the integrated feature; use existing required checks for non-browser work and explain why browser verification is inapplicable. |
-| Confirmed scope changes after implementation | [flow-amend](../flow-amend/SKILL.md); prepare the appropriate Spec update/version, retain the same Plan and history, and return to human Spec confirmation before new-scope execution. |
+| Confirmed Spec, required Plan coverage missing or approach review needed | [flow-plan](../flow-plan/SKILL.md); choose the peer scopes/count, honoring user directives, and save/review each actual scoped Plan under the delegation. Preserve valid peer Plans and do not block their eligible work. |
+| Selected approved Plan lacks simple execution work | [flow-todo](../flow-todo/SKILL.md); split that Plan into bounded engineering Todos, reuse matching records by qualified Plan identity and scope, and save only missing work. |
+| Eligible Todo in a current applicable Plan | [flow-do](../flow-do/SKILL.md); bind its exact owner/version/P<N>, implement/check/close engineering-complete work, and select the next eligible group within the Plan or a separate independent Plan. |
+| A Plan's Todos engineering-complete | Run its required integrated checks and [flow-e2e](../flow-e2e/SKILL.md) for browser paths, then hand off that Plan's scoped acceptance. Perform distinct Spec-wide checks when their inputs are ready; no per-Todo browser pass or duplicated whole-product run per Plan. |
+| Confirmed scope changes after implementation | [flow-amend](../flow-amend/SKILL.md); update the relevant Spec version and affected Plan artifacts, preserving unchanged Plans/history. Obtain confirmation for changed product content before that scope executes. |
 
 Keep small-change omissions explicit. Use serial execution by default when dependencies or shared files make it appropriate; spawning agents is governed by execution-mode and available capabilities, not by a desire to run every stage concurrently. Interactive decisions remain with the main agent.
 
@@ -55,9 +55,11 @@ Keep small-change omissions explicit. Use serial execution by default when depen
 
 Pass the current Spec reference/confirmation and actual user delegation to flow-plan/flow-todo/flow-do. Apply this run's scoped policy as caller context; do not label an agent decision as a human review. Preserve all technical justification, tests, dependencies, ownership, and validation requirements of the leaf skills.
 
+The main split is confirmed Spec → independent scoped Plans → simple Todos. Planning prepares each Todo's bounded result, inputs, settled rules and checks; Do supervision verifies/binds it to the actual code context without redoing feature planning. If a Todo still mixes several difficult results, refine the Todo split within its Plan rather than adding a mandatory internal-task layer. Routine coding steps stay local. Return missing product/architectural decisions to their owner. Group related small Todos within their Plan where useful; independent Plans may use separate contexts when the host supports them, without requiring a new permanent Bot per Plan.
+
 After each actionable step, inspect the saved output and actual results before advancing. A child saying “done” is not a passing check. Reuse existing completed work, tests, API fragments, and verified closure. Git checkpoint timing must not block otherwise eligible engineering work when committing has not been requested.
 
-For integrated browser verification, pass a feature-level Do handoff to flow-e2e; do not add a browser suite or a run per Todo. Reuse a previous pass only if its tested paths and code/environment still cover the current result. A new session alone does not require rerunning it; relevant code/environment changes do. An unavailable browser or failed required check is blocked/unverified, not inapplicable or passing.
+For integrated browser verification, pass the selected Plan's scope/Do evidence and any genuinely Spec-wide paths to flow-e2e. Reuse a pass only when its code/environment and tested scope still apply; a peer Plan or session change alone does not invalidate it. An unavailable browser or failed required check is blocked/unverified, not inapplicable or passing.
 
 ## 3. Repair, stop, or hand off honestly
 
@@ -67,7 +69,7 @@ Stop automatic retries when the same unresolved action/failure repeats on two co
 
 Pause with a precise question or blocker when permissions, data boundaries, required tools, or a material decision prevent progress. End the active invocation instead of polling/sleeping for human approval. On a host time/context limit, checkpoint and report what remains; do not claim delivery merely because execution stopped.
 
-Engineering delivery requires verified current Todos, required artifacts/checks, and the applicable integrated verification. Report engineering completion and native closure synchronization separately. Hand the user the Plan/Spec acceptance entry and remaining human items. Keep `Acceptance: pending` until actual user functional acceptance; do not cascade parent closure from child completion. Apply separately authorized commit/deployment actions only within their scope and existing checkpoints.
+Report engineering, closure synchronization and functional acceptance per Plan, plus whole-Spec coverage and outstanding global checks. A Plan may be delivered/accepted independently after its own requirements pass; peer blockers do not reset it. The complete Spec requires all required scopes and global checks, with actual user acceptance/authorized closure rather than child counts. Preserve separate Git/deployment authorization.
 
 ## 4. Persist a small resumable checkpoint
 
@@ -76,7 +78,7 @@ Use the target's existing automation-note convention, otherwise `.scratch/<featu
 Update at stage transitions, before waiting, after failed attempts, and before yielding to a host limit. Keep only:
 
 - Repository/feature and the originating request/delegation references.
-- Authoritative current Spec/Plan/Todo references and the human Spec confirmation source/scope.
+- Authoritative current Spec and all applicable Plan/scope references, their selected Todo groups and human confirmation source/scope; qualify package numbers by Plan identity.
 - Last completed action, evidence links, and the next action hint.
 - Latest applicable verification scope/code/environment reference, including failed/unrun checks.
 - Pending question/blocker, failure/attempt information, and last processed human-feedback reference.

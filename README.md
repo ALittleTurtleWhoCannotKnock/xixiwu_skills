@@ -2,6 +2,8 @@
 
 五阶段开发流程 + 调试技能，跨 Pi / Codex / Claude Code 通用。
 
+复杂需求按 **Spec → 多个独立 Plan → 简单 Todo** 拆解。AI 根据功能边界与耦合判断 Plan 数量，简单需求可保留一个；用户指定数量或分组时优先遵从。每个 Plan 能独立实现与验证，再拆成输入、结果、边界和检查清楚的工程待办；相关小 Todo 仍可合批，完成逐票判断。
+
 > **全局纪律：绝不主动提交或推送代码。** 未经用户明确指示（"提交"/"推送"），任何阶段、任何 agent（主会话或子 agent）都把改动留在工作区。提交永远经过用户确认（人工 checkpoint）。
 
 ## 安全与信任
@@ -101,6 +103,8 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 
 需要专职 Agent 时，流程 Agent 作为唯一用户入口，将需求、方案（Plan＋Todo）、开发和测试交给已绑定的执行者；问题与结果统一交回流程 Agent，由它核对后推进。角色、任务和结果格式见[通用协作协议](./flow-run/references/team-mode.md)，具体派发 API 留在宿主适配层，阶段技能保持独立可复用。
 
+流程 Agent 可直接维护有证据支持的流程状态、确认记录与导航链接。Todo 按工作量、上下文、依赖和改动范围分组：小且相关的票可同会话完成并复用验证，独立组在宿主与目录隔离允许时分会话并行；每票仍按实际覆盖与工程结果分别判定完成。阶段 Skill 的业务规则保持不变。
+
 ```
 /flow-init       流程初始化（每个仓库首次配置，缺项可单独补齐）
     ↓
@@ -153,7 +157,7 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 | 辅助 | `/flow-export` | 导出会话原始记录为 Markdown | ✅ `exporter` |
 | 辅助 | `/flow-api` | 按待办产出接口契约（给前端 agent） | ✅ `contract-writer` |
 
-**Tracker 产物：** 本地分别保存 Spec、`plan.md` 和待办文件；GitHub/GitLab 分别使用 Spec issue、独立 Plan issue 和待办 issues。Plan 正文保存现行技术方案，关联 Spec 与待办，评论记录讨论和批准依据；/flow-amend 更新同一 Plan issue，不新建 plan-vN。字段与关联规则见 [`_agents/workflow-contract.md`](./_agents/workflow-contract.md#tracker-产物与-plan-引用)。
+**Tracker 产物：** Spec 可关联一个或多个 Plan，Spec 使用 `Plans:` 列真实引用／范围；旧单 `Plan:`、`plan.md` 继续兼容。新本地同级方案用 `plans/<scope>.md`，远程每个 Plan 是独立 issue，分别维护 Scope、批准、验收和自己的 Todos。`P1/P2` 只是一份 Plan 内的包编号，不代表多份 Plan。/flow-amend 就地更新受影响的方案，保留未变范围，不创建 plan-vN。见[共享约定](./_agents/workflow-contract.md#Spec与多个Plan)。
 
 **可选 HTML 规格阅读版：** `/flow-spec` 开始时确认本次是否需要额外生成 HTML；请求中已明确选择时直接沿用，否则等待回答。选择只对本次有效：需要时按统一的阅读布局生成，不需要时保持原有规格流程。正文仍保存在 Markdown 或 Spec issue，HTML 是带来源、版本和生成时间的阅读快照，不单独生成需求澄清页。GitHub 正文保留可读内容，只有已有授权发布渠道且验证可访问时才添加在线阅读链接；没有托管时交付本地文件，不自动提交或部署。详见[HTML 阅读版约定](./flow-spec/references/html-review.md)。
 
@@ -161,7 +165,7 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 
 新待办统一使用 `[Todo]` 标题前缀，GitHub 类型标签默认为 `todo`；本地标题、Plan 清单、INDEX 与进度报告也使用 Todo/待办。旧 `[Ticket]` / `ticket` 仍可识别和复用，不因更名重复建单，也不批量改写历史标题或标签。
 
-默认归属为 **Spec → Plan → Todos**；已有 Epic 时在 Spec 上方关联它。`Parent:` 说明直接归属，`Spec:` 定位规格版本，`Plan:` 定位 P<N>，`Blocked by:` 单独说明执行依赖。版本续接的旧待办保留为历史，不作为新待办的归属父级。
+默认归属为 **Spec → Plans（1:N）→ 各自 Todos（1:N）**；已有 Epic 时在 Spec 上方关联。每份 Plan 明确 Scope；每张 Todo 的 Parent／Plan 指向唯一实际方案及其包，Spec 记录适用版本，Blocked by 记录票内执行依赖。不同 Plan 不能靠新的跨方案硬依赖串起来冒充独立；不能满足用户数量与独立性时说明冲突后询问，不造空壳或擅改数量。
 
 | 模式 | 层级与列表 |
 |------|------------|
@@ -169,7 +173,7 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
 | 本地 Markdown | `.scratch/README.md` 列出 feature 入口；每个 feature 的 `INDEX.md` 提供当前规格、现行 Plan、待办层级链接与演进记录；`/flow-status` 读取源文件展示带状态的树形快照 |
 | GitLab | 保留相同逻辑字段，按实际平台能力同步原生关系；不支持的展示如实说明 |
 
-本地继续保持每票一个文件，文件夹里即可找到导航：
+本地仍每票一个文件，编号在 feature 内连续。旧 plan.md 不搬迁；多方案示例：
 
 ```text
 .scratch/
@@ -178,7 +182,9 @@ Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方�
     ├── INDEX.md              # 当前规格、Plan 与待办的可点击层级
     ├── spec.md               # 历史规格保留
     ├── spec-v2.md            # 当前规格（由 INDEX 指向）
-    ├── plan.md               # 原地更新，不叠版本
+    ├── plans/
+    │   ├── import.md         # 独立范围，就地更新
+    │   └── export.md         # 独立范围，就地更新
     └── issues/
         ├── 01-csv.md         # Spec v1 的历史票
         └── 04-json.md        # Spec v2 的当前票

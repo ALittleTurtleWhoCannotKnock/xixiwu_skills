@@ -149,9 +149,9 @@ Under the [ownership/navigation rules](../_agents/workflow-contract.md#归属层
 - **Local:** Create/update the feature INDEX and `.scratch/README.md` entry. Link the current Spec and actual artifacts only; do not create a placeholder Plan.
 - **GitHub:** Use `[Spec]` and the project's type label. If an Epic is specified, establish and verify the native parent relationship. Use the configured Project when present; report unsynchronized items.
 
-When `/flow-plan` later creates the plan, backlink `Plan:` from the current Spec. Locally update only the current Spec/index, preserving frozen versions. Remotely maintain separate bodies rather than placing the current plan in Spec comments.
+When `/flow-plan` creates one or more Plans, backlink every actual scoped reference under `Plans:`; legacy singleton `Plan:` remains readable. Keep the four-section product body, with the Plan list as navigation/provenance rather than copied approaches or approval states. Locally update only current navigation, preserving frozen versions; remotely keep one separate body per Plan.
 
-The Spec defines product acceptance criteria. If tickets proceed without a Plan, add a functional-acceptance subsection within the approach and `Acceptance: pending`; this Spec owns acceptance. With a Plan, link its acceptance entry instead. Maintain one acceptance state, without adding a fifth top-level Spec section.
+The Spec defines product acceptance criteria. With Plans, map each implementation/acceptance subset to one owner and link each Plan's scoped acceptance entry. Keep genuinely Spec-wide checks under the approach and derive overall coverage without duplicating Plan-owned acceptance states. With no Plan, the Spec retains the acceptance area. Do not add a fifth top-level section or infer whole-Spec acceptance from child counts.
 
 ### Step 4.5: Generate HTML only when requested
 

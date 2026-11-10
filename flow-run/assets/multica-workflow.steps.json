@@ -1,0 +1,14 @@
+[
+  {"status_key": "backlog", "handler": {"type": "none"}},
+  {"status_key": "todo", "handler": {"type": "none"}, "next_status_key": "in_progress"},
+  {"new_status": {"name": "需求与规格", "category": "started", "color": "#8B5CF6"}, "handler": {"type": "none"}},
+  {"new_status": {"name": "Spec 待确认", "category": "started", "color": "#F59E0B"}, "handler": {"type": "none"}},
+  {"new_status": {"name": "方案与待办", "category": "started", "color": "#3B82F6"}, "handler": {"type": "none"}},
+  {"new_status": {"name": "开发实现", "category": "started", "color": "#06B6D4"}, "handler": {"type": "none"}},
+  {"new_status": {"name": "集成验测", "category": "started", "color": "#10B981"}, "handler": {"type": "none"}, "next_status_key": "in_review"},
+  {"status_key": "in_progress", "handler": {"type": "none"}, "next_status_key": "done"},
+  {"status_key": "in_review", "handler": {"type": "none"}, "next_status_key": "done"},
+  {"status_key": "blocked", "handler": {"type": "none"}},
+  {"status_key": "done", "handler": {"type": "none"}},
+  {"status_key": "cancelled", "handler": {"type": "none"}}
+]
