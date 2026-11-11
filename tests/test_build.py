@@ -246,6 +246,9 @@ p.write_text(json.dumps(s));print(json.dumps(out))
 
 
 class BuildTests(unittest.TestCase):
+    def test_deliberate_failure(self):
+        self.assertEqual(1, 2)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="dev-flow-build-")
         self.addCleanup(self.temp.cleanup)
