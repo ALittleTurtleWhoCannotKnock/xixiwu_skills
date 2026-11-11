@@ -1,22 +1,28 @@
-# 贡献指南
+# Contributing
 
-## 提 PR 之前
+**English** | [简体中文](./CONTRIBUTING.zh-CN.md)
 
-1. 只改你要改的那个技能或脚本，不要顺手重排无关文件。
-2. 在真实项目里跑过一遍，PR 描述里写清楚：改了什么、在哪个 CLI 上验证过、有什么副作用。
-3. 涉及 `install.sh`、`adapters/` 的改动，必须附 `--dry-run` 输出。
+## Before opening a PR
 
-## 不接受的内容
+1. Change only the relevant skill or script. Do not reorder unrelated files.
+2. Exercise the change in a real project. Describe what changed, which CLI you used to verify it, and any side effects in the PR.
+3. Changes to `install.sh` or `adapters/` must include `--dry-run` output.
 
-- 任何形式的远程脚本执行（`curl | bash`、`iwr | iex`、下载后 `chmod +x` 再跑）
-- 读取 `~/.ssh`、`~/.aws`、环境变量里的凭据，或任何形式的数据外传
-- 在技能步骤里插入与技能目标无关的系统修改
-- 未说明来源的二进制文件
+## Documentation languages
 
-## 为什么严格
+Maintain English `.md` and Chinese `.zh-CN.md` versions of the project overview, user guide, architecture, and contribution guide, with language-switch links at the top. When features, installation commands, or workflow behavior change, update the corresponding English and Chinese documentation in the same PR. Keep commands, examples, and rules consistent. Existing skill files and shared prompts remain the authoritative execution sources.
 
-这些文件会被 AI agent 当作指令执行，不是给人看的文档。一行看似无害的命令，会在一台开发机上真实运行。
+## Changes we do not accept
 
-## 流程
+- Remote script execution in any form, including `curl | bash`, `iwr | iex`, or downloading a script, running `chmod +x`, and executing it.
+- Reading credentials from `~/.ssh`, `~/.aws`, or environment variables, or exfiltrating data in any form.
+- Unrelated system modifications inserted into skill instructions.
+- Binary files without a documented source.
 
-fork → 分支 → PR → 维护者审阅 → 合并。`main` 已开启分支保护，直接推送会被拒绝。
+## Why these rules are strict
+
+AI agents execute these files as instructions; they are not just explanatory documents. A seemingly harmless command can run on a developer's actual machine.
+
+## Contribution process
+
+Fork → branch → PR → maintainer review → merge. The `main` branch is protected; direct pushes are rejected.
