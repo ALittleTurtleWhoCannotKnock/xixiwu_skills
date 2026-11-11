@@ -1,77 +1,81 @@
 # Dev Flow Skills
 
-五阶段开发流程 + 调试技能，跨 Pi / Codex / Claude Code 通用。
+**English** | [简体中文](./README.zh-CN.md)
 
-复杂需求按 **Spec → 多个独立 Plan → 简单 Todo** 拆解。AI 根据功能边界与耦合判断 Plan 数量，简单需求可保留一个；用户指定数量或分组时优先遵从。每个 Plan 能独立实现与验证，再拆成输入、结果、边界和检查清楚的工程待办；相关小 Todo 仍可合批，完成逐票判断。
+A five-stage development workflow plus debugging skills, shared across Pi, Codex, and Claude Code.
 
-> **全局纪律：绝不主动提交或推送代码。** 未经用户明确指示（"提交"/"推送"），任何阶段、任何 agent（主会话或子 agent）都把改动留在工作区。提交永远经过用户确认（人工 checkpoint）。
+[User guide](./TUTORIAL.md) · [Architecture](./architecture.md) · [Contributing](./CONTRIBUTING.md)
 
-## 安全与信任
+Break complex requirements into **Spec → independent Plans → simple Todos**. The AI chooses the number of Plans from functional boundaries and coupling; a simple requirement may need only one. Explicit user counts or groupings take precedence. Each Plan can be implemented and verified independently, then split into engineering Todos with clear inputs, results, boundaries, and checks. Related small Todos may share an execution batch, while completion is assessed separately for each Todo.
 
-这些技能会让 AI agent 在你机器上执行 shell 命令、读写文件。安装前请知悉：
+> **Global rule: never commit or push proactively.** Unless the user explicitly asks to commit or push, every stage and agent, including the main session and sub-agents, leaves changes in the working tree. Committing always requires a human checkpoint.
 
-- **只安装来自本仓库 `main` 分支的版本**。任何 fork、镜像、转发的副本都可能被改动，不要安装。
-- 本仓库的 `main` 有分支保护：所有改动必须经 PR，由维护者逐行审阅后合并。
-- 拒绝任何在 PR 中加入「下载并执行远程脚本」「修改流程说明以外的系统配置」「读取并外传本地凭据」的改动。
-- 安装脚本 `install.sh` 会写入目标 CLI 的配置目录。执行 `--dry-run` 可以先看清它准备改什么。
+## Safety and trust
 
-发现问题请开 issue，不要直接提 PR 修改他人机器的默认行为。
+These skills let an AI agent execute shell commands and read or write files on your machine. Before installing:
 
-## 安装与更新
+- **Install only versions from this repository's `main` branch.** Forks, mirrors, and redistributed copies may have been modified; do not install them.
+- The `main` branch is protected. All changes must go through a PR and line-by-line maintainer review before merging.
+- Reject PRs that introduce remote script download/execution, system configuration changes unrelated to the workflow instructions, or access to and exfiltration of local credentials.
+- The `install.sh` installer writes to the selected CLI's configuration directories. Use `--dry-run` to inspect the proposed changes first.
 
-安装和更新前先审阅本仓库 `main` 分支的源码，再通过本地 `install.sh` 统一安装。首次获取源码的步骤见下方[从源码安装](#从源码安装cli)。
+Report problems in an issue rather than submitting a PR that changes default behavior on someone else's machine.
 
-### Multica：一个包加一个角色
+## Installation and updates
 
-Multica 的工作区技能与运行时本地技能是两套安装位置。在已登录、选对工作区的 Multica CLI 环境中，进入本仓库运行：
+Review the source on this repository's `main` branch before installing or updating, then use the local `install.sh` entry point. For the initial checkout, see [Install from source](#install-from-source-cli).
+
+### Multica: one package plus one role
+
+Multica workspace skills and runtime-local skills are separate installation locations. Log in to the Multica CLI, select the correct workspace, and run these commands from this repository:
 
 ```bash
-# 先预览；用实际 agent ID，不按名称猜测
+# Preview first; use an actual agent ID rather than guessing by name.
 ./install.sh multica --agent-id <agent-id> --role flow --dry-run
 
-# 导入单个 dev-flow 技能包、追加绑定，并写入流程角色指令
+# Import one dev-flow package, add its binding, and save the Flow role instructions.
 ./install.sh multica --agent-id <agent-id> --role flow
 ```
 
-默认从当前 CLI 工作区读取；目标在另一个工作区时，显式加 `--workspace-id <workspace-id>`。读取后核对智能体所属工作区并将后续调用绑定到它，不修改默认工作区。需要覆盖自己以前导入的同名包时，显式加 `--on-conflict overwrite`；默认冲突即停止。只想导入技能可省略 `--agent-id` 和 `--role`，但这不会配置角色。
+The installer reads the current CLI workspace by default. For a target in another workspace, pass `--workspace-id <workspace-id>`. It verifies the agent's workspace and scopes subsequent calls to it without changing the default workspace. To replace a package you previously imported under the same name, explicitly pass `--on-conflict overwrite`; conflicts stop the installation by default. Omit both `--agent-id` and `--role` to import only the skill, without configuring a role.
 
-统一包由原有 `flow-*`、共享规则、资源和角色文档确定性生成，不修改维护源码；内部入口重命名为普通文档，以适应会丢弃嵌套 `SKILL.md` 的宿主。只需一个 `dev-flow` 工作区 Skill，阶段内容仍按需读取。可用 `python3 -B adapters/package_bundle.py --output dist/dev-flow.skill` 生成归档，再在 Multica 的“从本地导入”中选择它。
+The unified package is built deterministically from the maintained `flow-*` skills, shared rules, resources, and role documents. Building it does not modify those sources. Internal entry points become ordinary documents to support hosts that discard nested `SKILL.md` files. Only one `dev-flow` workspace Skill is needed; stage instructions are still loaded on demand. To import through Multica's local-file interface, first build the archive with `python3 -B adapters/package_bundle.py --output dist/dev-flow.skill`.
 
-角色可选 `flow`、`requirements`、`planning`、`development`、`verification`，对应[流程](./roles/flow.md)、[需求](./roles/requirements.md)、[方案](./roles/planning.md)、[开发](./roles/development.md)、[测试](./roles/verification.md)。这些持久角色指令使用中文，阶段 Skill 的内部文档和项目业务产物语言设置保持独立。流程角色只协调和核对，不会因缺少执行者就自行写业务代码。安装器保留角色标记外的已有指令，修改前备份，只更新角色指令并追加技能绑定，不改模型、运行时、Access、环境变量或工具权限。重复安装会更新同一个角色区块；如既有自定义指令与新角色冲突，需自行整理这些自定义要求。
+Available roles are `flow`, `requirements`, `planning`, `development`, and `verification`: [Flow](./roles/flow.md), [Requirements](./roles/requirements.md), [Planning](./roles/planning.md), [Development](./roles/development.md), and [Verification](./roles/verification.md). These persistent role instructions are in Chinese; stage-instruction language and the target project's artifact-language settings remain independent. The Flow role coordinates and reviews evidence; missing specialists do not authorize it to implement business code. The installer backs up existing instructions, preserves content outside the managed role markers, updates only that block, and adds the skill binding. It does not change models, runtimes, Access, environment variables, or tool permissions. Reinstallation updates the same role block. Resolve any conflicting custom instructions outside that block yourself.
 
-**描述、Skill 和权限各有用途。** Multica 的“描述”仅展示，“指令”才逐次注入；只挂 Skill 不能把一个编程运行时变成只读协调器。角色指令是行为边界，真正限制文件写入、命令或网络需要由宿主/运行时/操作系统实施；Multica 的 Access 控制谁能调用智能体，不是其工具权限。不要把角色自述或提示词遵守当作权限隔离验证。参见 [Multica 官方角色说明](https://github.com/multica-ai/multica/blob/3c5c8b245359b9b8e913a47f97211f2a3426f149/apps/docs/content/docs/agents-create.zh.mdx)和[运行时安全模型](https://github.com/multica-ai/multica/blob/3c5c8b245359b9b8e913a47f97211f2a3426f149/apps/docs/content/docs/security-model.zh.mdx)。
+**Descriptions, skills, and permissions serve different purposes.** Multica's Description is display metadata; Instructions are injected into runs. Attaching a skill alone does not turn a coding runtime into a read-only coordinator. Role instructions define behavior; enforcement of file, command, or network restrictions belongs to the host, runtime, or operating system. Multica Access controls who can invoke an agent, rather than that agent's tool permissions. An agent's self-description or prompt compliance is not proof of permission isolation. See the [official Multica role guide](https://github.com/multica-ai/multica/blob/3c5c8b245359b9b8e913a47f97211f2a3426f149/apps/docs/content/docs/agents-create.zh.mdx) and [runtime security model](https://github.com/multica-ai/multica/blob/3c5c8b245359b9b8e913a47f97211f2a3426f149/apps/docs/content/docs/security-model.zh.mdx).
 
-工作区包是导入时的快照，更新本地源码不会自动更新 Multica 数据库中的包；需再次导入。安装器追加绑定以保留其他能力，不会自动删除旧 `flow-run`/`flow-status` 或继承的本地 Skill；确认统一包工作后可在界面停用旧绑定。
+A workspace package is an import-time snapshot. Updating the local checkout does not refresh the copy stored in Multica; import it again. The installer adds a binding while preserving other capabilities. It does not remove old `flow-run`/`flow-status` bindings or inherited local skills. Once the unified package works, you can disable obsolete bindings in the UI.
 
-### 从源码安装（CLI）
+### Install from source (CLI)
 
-需要 Bash 和 Python 3.9+。将仓库放在长期保留的独立目录中，再选择目标 CLI：
+Requires Bash and Python 3.9+. Keep the repository in a permanent, separate directory, then choose the target CLI:
 
 ```bash
 git clone https://github.com/ALittleTurtleWhoCannotKnock/xixiwu_skills.git
 cd xixiwu_skills
 ```
 
-审阅 `install.sh`、`adapters/` 及准备安装的技能内容，确认后先预览，再执行本地安装：
+Review `install.sh`, `adapters/`, and the skills you intend to install. After review, preview the changes and run the local installer:
 
 ```bash
 ./install.sh all --dry-run
 ./install.sh all
 
-# 也可以只安装一个 CLI
+# Or install for a single CLI.
 ./install.sh pi
 ./install.sh claude-code
 ./install.sh codex
 ```
 
-同一个入口用于首次安装和后续更新。更新时，在原始仓库目录中执行：
+The same entry point handles installation and updates. In the original checkout, inspect incoming changes first:
 
 ```bash
 git fetch origin main
 git diff HEAD..origin/main
 ```
 
-审阅待更新内容后，再更新源码、预览并安装：
+After reviewing the changes, update the checkout, preview, and install:
 
 ```bash
 git pull --ff-only
@@ -79,179 +83,185 @@ git pull --ff-only
 ./install.sh all
 ```
 
-安装器把各技能和 `_agents/` 链接到这份仓库；Pi / Claude Code 的 agent 文件由适配器生成。保留仓库的位置，以免软链接失效；源仓库放在技能扫描目录里时，先移到独立目录。
+The installer links the skills and `_agents/` to this checkout. Adapters generate the Pi and Claude Code agent files. Keep the checkout at the same location so the symlinks remain valid. If the source is inside a skill-discovery directory, move it to a separate directory first.
 
-| 目标 | 技能与共享文件 | 生成的 agent |
-|------|----------------|--------------|
+| Target | Skills and shared files | Generated agents |
+|--------|-------------------------|------------------|
 | `pi` | `~/.pi/agent/skills/` | `~/.pi/agent/agents/` |
 | `claude-code` | `~/.claude/skills/` | `~/.claude/agents/` |
-| `codex` | `~/.agents/skills/` | 分派时读取共享 prompt |
+| `codex` | `~/.agents/skills/` | Reads the shared prompt when delegating |
 
-Codex 和 Claude Code 的本地技能目录支持软链接，见 [OpenAI 官方说明](https://learn.chatgpt.com/docs/build-skills)和 [Claude Code 官方说明](https://code.claude.com/docs/en/skills#choose-where-skills-load)。Pi 的技能发现规则见 [Pi 官方说明](https://pi.dev/docs/latest/skills)。
+Codex and Claude Code local skill directories support symlinks; see the [OpenAI documentation](https://learn.chatgpt.com/docs/build-skills) and [Claude Code documentation](https://code.claude.com/docs/en/skills#choose-where-skills-load). Pi skill discovery is described in the [Pi documentation](https://pi.dev/docs/latest/skills).
 
-更新时，已有 agent 的 YAML frontmatter（模型、工具列表及其他自定义字段）原样保留，仅更新正文；新 agent 默认不绑定模型。在目标项目运行 `/flow-init`，由用户选择基础模型，或安装时用 `--project-root /path/to/project` 为新 Pi agent 读取该项目已有的选择。已有 agent 的配置优先保留，项目的 tracker、执行模式与模型文件不由安装器改写。
+Updates preserve the YAML frontmatter of existing agents, including model, tool lists, and other custom fields, and replace only the body. New agents have no model binding by default. Run `/flow-init` in the target project to select its base model, or pass `--project-root /path/to/project` during installation so new Pi agents can read that project's existing choice. Existing agent configuration takes precedence. The installer does not rewrite the project's tracker, execution-mode, or model configuration.
 
-同名旧目录、旧软链接和待更新的 agent 会先迁到 `~/.local/share/dev-flow-skills/backups/<时间戳>/`，保留原目录结构；备份位于技能扫描目录之外。旧的整包技能副本及 Codex 旧目录 `~/.codex/skills/` 中的同名项也会迁出，避免继续加载旧版本；其他技能和 CC Switch 的源文件保留。需要恢复时，用备份中的原路径替换对应安装项。重复运行且内容未变时不产生备份。
+Old directories and symlinks with managed names, and agent files being updated, are first moved to `~/.local/share/dev-flow-skills/backups/<timestamp>/`, preserving their directory structure. Backups are outside skill-discovery directories. Old whole-bundle copies and matching managed entries under Codex's legacy `~/.codex/skills/` directory are also moved out to prevent stale discovery. Other skills and CC Switch source files are preserved. To restore an item, replace its installed path with the corresponding backup. Repeating an unchanged installation creates no backup.
 
-技能命令统一为 `flow-*`。从旧版更新时，安装器会备份并迁出指向本仓库的旧名称链接、技能声明匹配的旧副本和旧整包目录，再安装新名称；同名个人技能保留。新会话使用下表中的命令，现有项目配置、待办字段与业务产物路径保持原样。
+Skill commands use the `flow-*` names. When upgrading older versions, the installer backs up and removes old-name links pointing to this repository, copies identified by their skill declarations, and old whole-bundle directories, then installs the new names. Personal skills with the same name are preserved. Use the commands below in new sessions; existing project settings, Todo fields, and artifact paths stay intact.
 
-可用 `--home /tmp/dev-flow-home` 指定另一套用户目录进行隔离验证。安装完成后重新打开 CLI 会话；使用 CC Switch 等管理器时，将这份仓库作为后续来源，避免再次同步旧副本。
+Use `--home /tmp/dev-flow-home` for an isolated installation. Reopen the CLI session after installation. With managers such as CC Switch, use this checkout as the source for future updates to avoid restoring an old copy.
 
-## 主流程
+## Main workflow
 
-可通过 [`/flow-run`](./flow-run/SKILL.md) 交给 Bot／主 agent 总编排：从需求准备 Spec，与你确认后，自动规划 Plan、拆分 Todo、实现并执行适用的本地浏览器验测。它复用下列技能，保留单独调用时的交互；技术方案和拆分按任务授权自动决策，人工功能验收及 Git／部署仍分别处理。重启后读取实际产物与小型续跑记录恢复，Bot 的唤醒与会话保存由宿主负责。接入说明见[Bot 配置](./flow-run/references/bot-setup.md)。
+Use [`/flow-run`](./flow-run/SKILL.md) to let a Bot or main agent coordinate the feature: prepare a Spec, obtain your confirmation, then plan, create Todos, implement, and run applicable local browser verification. It reuses the stage skills below and preserves their standalone interactions. Technical planning and task splitting follow the actual delegation; human functional acceptance and Git/deployment authorization remain separate. On restart, it recovers from authoritative artifacts and a small checkpoint. The host is responsible for waking the Bot and retaining sessions. See [Bot setup](./flow-run/references/bot-setup.md).
 
-需要专职 Agent 时，流程 Agent 作为唯一用户入口，将需求、方案（Plan＋Todo）、开发和测试交给已绑定的执行者；问题与结果统一交回流程 Agent，由它核对后推进。角色、任务和结果格式见[通用协作协议](./flow-run/references/team-mode.md)，具体派发 API 留在宿主适配层，阶段技能保持独立可复用。
+With dedicated agents, the Flow Agent is the sole user-facing owner. It routes Requirements, Planning (Plan + Todo), Development, and Verification to bound workers, reviews their questions and evidence, and advances the workflow. See the [generic team contract](./flow-run/references/team-mode.md) for roles, assignments, and results. Host adapters own the dispatch APIs; stage skills remain independently reusable.
 
-流程 Agent 可直接维护有证据支持的流程状态、确认记录与导航链接。Todo 按工作量、上下文、依赖和改动范围分组：小且相关的票可同会话完成并复用验证，独立组在宿主与目录隔离允许时分会话并行；每票仍按实际覆盖与工程结果分别判定完成。阶段 Skill 的业务规则保持不变。
+The Flow Agent may directly maintain evidence-backed coordination status, confirmation records, and navigation links. Group Todos by workload, shared context, dependencies, and change scope. Small related Todos can share a session and applicable checks; independent groups can use separate sessions when supported by the host and directory isolation. Assess each Todo's completion from its actual coverage and engineering evidence. Stage skills retain their business rules.
 
 ```
-/flow-init       流程初始化（每个仓库首次配置，缺项可单独补齐）
+/flow-init       Initialize the workflow for a repository, or fill missing settings
     ↓
-/flow-clarify    需求澄清
+/flow-clarify    Align requirements
     ↓
-/flow-spec       规格定义
+/flow-spec       Define the product Spec
     ↓
-/flow-plan       方案规划（人工审）
+/flow-plan       Plan the implementation, with human review
     ↓
-/flow-todo       任务拆分
+/flow-todo       Split work into Todos
     ↓
-/flow-do         实现与验证
+/flow-do         Implement and verify
 
-已实现 spec 有变动？→ /flow-amend（增量演进，生成 spec-v2 + plan 就地更新 + 新待办）
+An implemented Spec changed? → /flow-amend
+    Increment the Spec version, update affected Plans in place, and add follow-on Todos.
 ```
 
-## 辅助技能
+## Supporting skills
 
 ```
 /flow-amend
-    已实现 spec 的需求变动：只澄清变动部分，深度判断（增量 vs 重做），
-    生成 spec-v(N+1) + 更新 INDEX + 续接待办
+    Clarify only changes to an implemented Spec, assess increment vs. redesign,
+    then create spec-v(N+1), update INDEX, and add follow-on Todos.
 
 /flow-debug
-    系统化调试：反馈循环 → 最小化 → 假设 → 插桩 → 修复 → 回归测试
+    Debug systematically: feedback loop → minimize → hypothesize → instrument → fix → regress.
 
 /flow-export
-    导出当前会话的原始聊天记录为 Markdown（支持 Claude Code / Codex / Pi / Cursor）
+    Export the original session transcript as Markdown.
+    Supports Claude Code, Codex, Pi, and Cursor.
 
 /flow-api
-    后端待办完成后产出接口契约片段，供前端 agent 联调（Node.js 无自动文档场景）
+    Extract API contract fragments after a backend Todo for frontend integration.
+    Useful for Node.js projects without generated API documentation.
 ```
 
-## 技能列表
+## Skill catalog
 
-| 阶段 | 命令 | 功能 | 可分派子 agent |
-|------|------|------|---------------|
-| 总编排 | `/flow-run` | Spec 人工确认后自动规划、拆分、实现、验测与续跑 | 主 agent 编排，执行遵循项目模式 |
-| 0. 流程初始化 | `/flow-init` | 探测 tracker 类型，生成声明（每仓库首次配置） | — |
-| 1. 需求澄清 | `/flow-clarify` | 追问对齐需求，维护 CONTEXT.md | 交互型，留主会话 |
-| 2. 规格定义 | `/flow-spec` | 四段式结构化 spec（产品意图与边界），含 seams 分析 | 交互型，留主会话 |
-| 2.5 方案规划 | `/flow-plan` | 技术决策/包分解/风险点，经人工审后拆票 | 交互型，留主会话 |
-| 3. 任务拆分 | `/flow-todo` | Tracer-bullet 拆分执行细节，引用 plan 条目 | 交互型，留主会话 |
-| 4. 实现与验证 | `/flow-do` | 按改动选择验证方式，复用测试并 review | ✅ `implementer`（单张待办自治执行） |
-| 辅助 | `/flow-status` | 只读聚合当前 feature/阶段/待办状态/阻塞项/下一步 | 主会话解析，scout 可做文件发现 |
-| 辅助 | `/flow-amend` | 已实现 spec 的需求变动（增量演进 + 深度判断闸门） | 交互型，留主会话 |
-| 辅助 | `/flow-simplify` | 提交前清理代码（复用/质量/效率） | ✅ `simplifier` |
-| 辅助 | `/flow-debug` | 系统化调试循环 | 交互型，留主会话 |
-| 辅助 | `/flow-e2e` | 本地启动并实际操作浏览器验测；明确要求时沉淀回归用例 | 按 execution-mode 执行，执行者需有浏览器能力 |
-| 辅助 | `/flow-export` | 导出会话原始记录为 Markdown | ✅ `exporter` |
-| 辅助 | `/flow-api` | 按待办产出接口契约（给前端 agent） | ✅ `contract-writer` |
+| Stage | Command | Purpose | Delegation |
+|-------|---------|---------|------------|
+| Coordination | `/flow-run` | Plan, split, implement, verify, and resume after human Spec confirmation | Main agent coordinates; execution follows project mode |
+| 0. Initialize | `/flow-init` | Discover the tracker and write declarations for a new repository | — |
+| 1. Clarify | `/flow-clarify` | Align requirements through questions and maintain CONTEXT.md | Interactive; stays in the main session |
+| 2. Specify | `/flow-spec` | Four-section product Spec with boundaries and seam analysis | Interactive; stays in the main session |
+| 2.5. Plan | `/flow-plan` | Independent Plan scopes, decisions, packages, and risks; applicable approval precedes ticketing | Interactive; stays in the main session |
+| 3. Split Todos | `/flow-todo` | Simple, verifiable engineering Todos under each actual Plan | Interactive; stays in the main session |
+| 4. Implement | `/flow-do` | Choose checks by change type, reuse tests, and review | ✅ `implementer` executes an assigned Todo |
+| Support | `/flow-status` | Read-only feature, stage, Todo, blocker, and next-action snapshot | Main session interprets; scout may discover files |
+| Support | `/flow-amend` | Incremental changes to an implemented Spec, with a redesign gate | Interactive; stays in the main session |
+| Support | `/flow-simplify` | Cleanup before committing: reuse, quality, and efficiency | ✅ `simplifier` |
+| Support | `/flow-debug` | Systematic debugging loop | Interactive; stays in the main session |
+| Support | `/flow-e2e` | Start locally and verify in a real browser; retain regression tests only when requested | Follows execution-mode; worker needs browser capability |
+| Support | `/flow-export` | Export the original session transcript as Markdown | ✅ `exporter` |
+| Support | `/flow-api` | Produce a Todo's API contract for frontend agents | ✅ `contract-writer` |
 
-**Tracker 产物：** Spec 可关联一个或多个 Plan，Spec 使用 `Plans:` 列真实引用／范围；旧单 `Plan:`、`plan.md` 继续兼容。新本地同级方案用 `plans/<scope>.md`，远程每个 Plan 是独立 issue，分别维护 Scope、批准、验收和自己的 Todos。`P1/P2` 只是一份 Plan 内的包编号，不代表多份 Plan。/flow-amend 就地更新受影响的方案，保留未变范围，不创建 plan-vN。见[共享约定](./_agents/workflow-contract.md#Spec与多个Plan)。
+**Tracker artifacts:** A Spec may reference one or several Plans. Its `Plans:` list records actual references and scopes; legacy singleton `Plan:` and `plan.md` remain supported. New local peer scopes use `plans/<scope>.md`; remotely, each Plan is an independent issue with its own Scope, approval, acceptance, and Todos. `P1/P2` are packages inside one Plan, not separate Plans. `/flow-amend` updates affected Plans in place, preserving unchanged scopes without creating plan-vN. See the [shared contract](./_agents/workflow-contract.md#Spec与多个Plan).
 
-**可选 HTML 规格阅读版：** `/flow-spec` 开始时确认本次是否需要额外生成 HTML；请求中已明确选择时直接沿用，否则等待回答。选择只对本次有效：需要时按统一的阅读布局生成，不需要时保持原有规格流程。正文仍保存在 Markdown 或 Spec issue，HTML 是带来源、版本和生成时间的阅读快照，不单独生成需求澄清页。GitHub 正文保留可读内容，只有已有授权发布渠道且验证可访问时才添加在线阅读链接；没有托管时交付本地文件，不自动提交或部署。详见[HTML 阅读版约定](./flow-spec/references/html-review.md)。
+**Optional Spec HTML:** At the start of `/flow-spec`, choose whether this invocation should also produce an HTML reading view. Reuse an explicit choice in the request; otherwise wait for the answer. The choice applies only to that invocation. The Markdown file or Spec issue stays authoritative. HTML is a snapshot with source, version, and generation time; no separate requirements-clarification page is created. GitHub retains the readable Spec body. Add an online reading link only when an authorized publishing channel exists and access has been verified. Otherwise deliver the local file without automatically committing or deploying it. See the [HTML reading-view contract](./flow-spec/references/html-review.md).
 
-## 层级与进度入口
+## Hierarchy and progress
 
-新待办统一使用 `[Todo]` 标题前缀，GitHub 类型标签默认为 `todo`；本地标题、Plan 清单、INDEX 与进度报告也使用 Todo/待办。旧 `[Ticket]` / `ticket` 仍可识别和复用，不因更名重复建单，也不批量改写历史标题或标签。
+New Todos use the `[Todo]` title prefix and, on GitHub, the default `todo` type label. Local titles, Plan lists, INDEX navigation, and progress reports also use Todo. Legacy `[Ticket]`/`ticket` items remain discoverable and reusable; renaming does not justify duplicate issues or bulk changes to historical titles and labels.
 
-默认归属为 **Spec → Plans（1:N）→ 各自 Todos（1:N）**；已有 Epic 时在 Spec 上方关联。每份 Plan 明确 Scope；每张 Todo 的 Parent／Plan 指向唯一实际方案及其包，Spec 记录适用版本，Blocked by 记录票内执行依赖。不同 Plan 不能靠新的跨方案硬依赖串起来冒充独立；不能满足用户数量与独立性时说明冲突后询问，不造空壳或擅改数量。
+The default hierarchy is **Spec → Plans (1:N) → each Plan's Todos (1:N)**, with an existing Epic above the Spec when specified. Each Plan declares its Scope. A Todo's Parent/Plan identifies one actual owner and package; Spec identifies the applicable version, while Blocked by records execution dependencies. New hard dependencies between peer Plans contradict independence. If a requested count cannot satisfy independence and coverage, explain the conflict and ask rather than inventing empty scopes or silently changing the count.
 
-| 模式 | 层级与列表 |
-|------|------------|
-| GitHub | 建立原生 parent/sub-issue 关系；标题与类型标签区分 Spec / Plan / Todo；已配置的 Projects 表格可打开 View → Show hierarchy |
-| 本地 Markdown | `.scratch/README.md` 列出 feature 入口；每个 feature 的 `INDEX.md` 提供当前规格、现行 Plan、待办层级链接与演进记录；`/flow-status` 读取源文件展示带状态的树形快照 |
-| GitLab | 保留相同逻辑字段，按实际平台能力同步原生关系；不支持的展示如实说明 |
+| Tracker | Hierarchy and navigation |
+|---------|--------------------------|
+| GitHub | Native parent/sub-issue relationships; titles and type labels distinguish Spec, Plan, and Todo. Configured Projects tables can enable View → Show hierarchy. |
+| Local Markdown | `.scratch/README.md` lists feature entries. Each feature's `INDEX.md` links the current Spec, applicable Plans, Todos, and evolution history. `/flow-status` reads source files to display a status tree. |
+| GitLab | Keep the same logical fields and use actual platform capabilities for native relationships; report unsupported display features. |
 
-本地仍每票一个文件，编号在 feature 内连续。旧 plan.md 不搬迁；多方案示例：
+Keep one file per Todo and continue numbering across the feature. Do not move an existing plan.md. A multi-Plan example:
 
 ```text
 .scratch/
-├── README.md                 # feature 入口清单
+├── README.md                 # Feature entries
 └── export/
-    ├── INDEX.md              # 当前规格、Plan 与待办的可点击层级
-    ├── spec.md               # 历史规格保留
-    ├── spec-v2.md            # 当前规格（由 INDEX 指向）
+    ├── INDEX.md              # Clickable Spec/Plan/Todo hierarchy
+    ├── spec.md               # Historical Spec retained
+    ├── spec-v2.md            # Current Spec, selected by INDEX
     ├── plans/
-    │   ├── import.md         # 独立范围，就地更新
-    │   └── export.md         # 独立范围，就地更新
+    │   ├── import.md         # Independent scope, updated in place
+    │   └── export.md         # Independent scope, updated in place
     └── issues/
-        ├── 01-csv.md         # Spec v1 的历史票
-        └── 04-json.md        # Spec v2 的当前票
+        ├── 01-csv.md         # Historical Todo for Spec v1
+        └── 04-json.md        # Current Todo for Spec v2
 ```
 
-INDEX 只维护导航、当前版本与演进，不复制方案正文、待办状态或批准记录。创建/更新产物时同步关联；只读 `/flow-status` 发现缺失、冲突或失效链接时报告，不代改。Projects 是可选入口，父子进度不代表 Plan 已批准或业务已验收。细则见[归属层级与列表展示](./_agents/workflow-contract.md#归属层级与列表展示)。
+INDEX holds navigation, current-version provenance, and evolution history, rather than copies of Plan bodies, Todo states, or approvals. Synchronize links when creating or updating artifacts. Read-only `/flow-status` reports missing, conflicting, or broken references without repairing them. Projects is optional. Child progress proves neither Plan approval nor functional acceptance. See [ownership and navigation](./_agents/workflow-contract.md#归属层级与列表展示).
 
-## 执行型子 agent
+## Execution sub-agents
 
-执行型技能可分派给独立子 agent 执行（输入明确 → 跑完 → 写文件 → 报告，无需中途人机交互）。
+Execution stages may delegate to isolated sub-agents: clear inputs → execute → write artifacts → report, without an intermediate user conversation.
 
-**单一 prompt 源 + 各工具适配层：**
+**One prompt source, with tool adapters:**
 
 ```
-_agents/                # 工具无关的 system prompt（改 prompt 改这里）
+_agents/                # Tool-independent prompts; edit execution logic here
 ├── exporter.prompt.md
 ├── simplifier.prompt.md
 ├── contract-writer.prompt.md
 ├── implementer.prompt.md
 ├── scout.prompt.md
-└── diagram-guide.md      # 图示规范（mermaid），非独立 agent
+└── diagram-guide.md     # Mermaid conventions, not a separate agent
 
-adapters/               # 工具适配（thinking / 工具白名单）
-├── build.sh            # 一键生成各工具 agent 文件：./adapters/build.sh all
+adapters/               # Tool-specific thinking levels and tool allowlists
+├── build.sh            # Generate agent files: ./adapters/build.sh all
 └── codex/README.md
 ```
 
-| Agent | 职责 | thinking | 自治度 |
-|-------|------|----------|--------|
-| `exporter` | 会话格式转换 | low | 完全自治 |
-| `simplifier` | 提交前代码清理 | medium | 完全自治，不提交 |
-| `contract-writer` | 接口契约提取 | medium | 完全自治 |
-| `implementer` | 单张待办的实现与验证 | high | 完全自治，不提交/不跑 /flow-simplify |
-| `scout` | 代码侦察 → context.md | low | 完全自治 |
+| Agent | Responsibility | Thinking | Autonomy |
+|-------|----------------|----------|----------|
+| `exporter` | Session format conversion | low | Autonomous |
+| `simplifier` | Cleanup before committing | medium | Autonomous; does not commit |
+| `contract-writer` | API contract extraction | medium | Autonomous |
+| `implementer` | An assigned Todo's implementation and verification | high | Autonomous; does not commit or invoke /flow-simplify |
+| `scout` | Code reconnaissance → context.md | low | Autonomous |
 
-**设计原则：**
-- **决策前置**：spec/待办/plan 阶段已拍死所有决策（spec=产品、plan=技术、待办=执行细节），执行型 agent 遇到未覆盖的决策就停止并报告，绝不猜测或扩大范围。因此它们不依赖"中途回问主 agent"的通道，能跨 Pi / Claude Code / Codex 统一
-- **边界清晰**：子 agent 都不 commit、不跑 /flow-simplify（那是主 agent 在提交节点、经人工 checkpoint 后做的）
-- **票级自动完成**：每票领取为 `claimed`，实现、必要工程验证和审查通过后自动 `resolved`；远程同步 close，本地写状态即关闭，不等待人工功能验收或提交确认。人工验收集中到 Plan（无 Plan 时 Spec），`/flow-status` 分别显示工程完成与功能验收，旧 `code-complete` 只作兼容。详见[共享状态约定](./_agents/workflow-contract.md#状态与依赖)
-- **小改动入口**：单票小改动可明确省略 spec/plan，必要决策、测试边界与验收写在待办中；下游按该约定执行
-- **测试组织**：优先复用测试文件和 fixtures，同类输入参数化；业务/bug 使用行为测试，纯重构做前后回归，文档/配置/样式采用适用检查。必要验证仍须通过，不按待办批量生成 test 文件。规则见[共享验证约定](./_agents/workflow-contract.md#验证方式与测试组织)
-- **进度查询**：`/flow-status` 只读聚合状态，不修改任何状态；scout 只负责复杂目录发现，状态判断由主会话完成
-- **交互型留主会话**：`/flow-clarify` / `/flow-debug` / `/flow-spec` / `/flow-plan` / `/flow-todo` 需要与你来回对话，不适合隔离
+**Design principles:**
 
-**单独生成 agent 文件（底层适配器）：** 常规安装与更新使用根目录的 `install.sh`，以保留已有 agent 配置。`build.sh` 按模板完整生成文件：
+- **Settle decisions upstream.** Spec owns product decisions, Plan technical decisions, and Todo execution details. An execution agent stops and reports an uncovered decision instead of guessing or expanding scope. It does not rely on an intermediate question channel to the main agent, allowing the same logic across Pi, Claude Code, and Codex.
+- **Clear boundaries.** Sub-agents neither commit nor invoke /flow-simplify. The main session owns those steps at the commit checkpoint, with human authorization.
+- **Automatic engineering completion.** Claim a Todo as `claimed`; once implementation, required engineering checks, and review pass, mark it `resolved`. Synchronize remote closure; locally, the state update is closure. Human functional acceptance and Git authorization do not delay a qualified engineering Todo. Acceptance belongs to Plan, otherwise Spec. `/flow-status` shows engineering and acceptance separately; `code-complete` is legacy compatibility only. See [state semantics](./_agents/workflow-contract.md#状态与依赖).
+- **Small-change path.** A confirmed small Todo may explicitly omit Spec/Plan and carry the necessary decisions, test boundaries, and criteria itself. Downstream stages respect that omission.
+- **Test organization.** Reuse test files and fixtures, parameterizing related inputs. Use behavior tests for behavior/bug changes, before/after regression for pure refactoring, and applicable checks for docs, configuration, and styles. Required verification must pass; do not generate test files per Todo. See [validation conventions](./_agents/workflow-contract.md#验证方式与测试组织).
+- **Read-only progress.** `/flow-status` aggregates without changing state. Scout handles complex file discovery only; the main session interprets status.
+- **Interactive stages stay in the main session.** `/flow-clarify`, `/flow-debug`, `/flow-spec`, `/flow-plan`, and `/flow-todo` need user interaction and are unsuitable for isolated execution.
+
+**Generate agent files directly (low-level adapter):** Use root `install.sh` for normal installation and updates so existing agent configuration is preserved. `build.sh` generates complete files from templates:
+
 ```bash
 ./adapters/build.sh all --project-root /path/to/project
 
-# 预览生成结果，写入独立目录
+# Preview generated files in a separate directory.
 ./adapters/build.sh all --project-root /path/to/project --output-dir /tmp/dev-flow-preview
 ```
 
-**基础模型由使用者在初始化时选择：** `/flow-init` 引导用户从当前工具实际可用的模型中选择，或明确选择 `inherit`，保存到 `docs/agents/execution-mode.md`。通用模板不写死模型名或供应商。
+**Users select the base model during initialization.** `/flow-init` offers the current tool's actual available models or explicit `inherit`, then saves the choice to `docs/agents/execution-mode.md`. Templates hard-code neither model nor provider.
 
-Pi 构建时的优先级为 `DEV_FLOW_MODEL` 临时覆盖 > 目标项目的“基础模型”；没有显式配置时省略 `model` 字段，交给工具自身的默认规则，不提供内置模型。其他工具分派时按各自支持的格式使用项目选择。
+For Pi builds, precedence is the one-off `DEV_FLOW_MODEL` override, then the target project's base-model field (`基础模型`). Without an explicit setting, omit `model` and use the tool's native defaults. Other tools apply the project choice through their supported dispatch parameters.
 
-`--project-root` 明确指定配置所属项目，省略时固定使用技能库根目录，不随启动目录改变。
+`--project-root` explicitly selects the project whose configuration is read. If omitted, it always defaults to the skill repository root, regardless of the invoking directory.
 
-`--output-dir` 将 Pi/Claude Code 文件分别生成到指定目录的 `pi/`、`claude-code/` 中，供预览和隔离测试；省略时写入对应工具的用户级 agents 目录。`codex` 目标仅显示使用说明，不写文件。
+`--output-dir` writes Pi and Claude Code files to its `pi/` and `claude-code/` subdirectories for previews and isolated tests. Without it, output goes to each tool's user-level agents directory. The `codex` target prints usage guidance and writes no files.
 
-**是否派子 agent 是可配置的：** 初始化时（`/flow-init`）会询问你的默认执行模式，存入 `docs/agents/execution-mode.md`：
-- `subagent`（默认推荐）→ 执行型技能分派给独立子 agent
-- `inline` → 主会话直接执行（参照同一份 `_agents/*.prompt.md`）
+**Delegation is configurable.** `/flow-init` asks for the default execution mode and stores it in `docs/agents/execution-mode.md`:
 
-无论选哪个，**单次执行时都可临时覆盖**（如"这张小待办别派了"）。执行逻辑的单一事实源是 `_agents/*.prompt.md`，两种模式只是执行主体不同。
+- `subagent` (recommended default): delegate execution stages to isolated sub-agents.
+- `inline`: the main session follows the same `_agents/*.prompt.md` directly.
 
-**交互语言和业务产物语言也由初始化确认：** `/flow-init` 分别确认两项，保存到目标项目的 `docs/agents/language.md`，例如中文交流、英文编写 Spec/Plan/Todos。示例不代表模板默认：
+Either choice allows an explicit one-off override, such as asking to handle a small Todo inline. `_agents/*.prompt.md` remains the single source for execution logic; only the executor differs.
+
+**Initialization also confirms interaction and artifact languages independently.** `/flow-init` saves both to the target project's `docs/agents/language.md`. For example, Chinese interaction with English Spec/Plan/Todos; this is an example, not a template default:
 
 ```markdown
 # Workflow language
@@ -259,72 +269,77 @@ interaction_language: zh-CN
 artifact_language: en
 ```
 
-单次明确指定语言时，只覆盖该次任务的对应项，不改项目默认。旧项目重跑初始化可只补语言，保留 tracker、提交策略、执行模式和基础模型；未确认时不保存推测值。普通任务遇到缺失配置可暂沿会话/既有产物语言，不因缺语言文件而中断，也不代用户初始化。
+An explicit task language overrides only that task's corresponding setting. On an older project, initialization can fill only missing languages while preserving tracker, commit strategy, execution mode, and base model. Never save guessed preferences as confirmed. Ordinary work with missing settings may temporarily follow the conversation or existing artifact language, without blocking or initializing on the user's behalf.
 
-各技能及生成的执行代理遵循[轻量语言约定](./_agents/language-policy.md)：内部指令语言与用户输出语言分开，产物标题、说明和图标签按配置，协议字段、状态值、引用、代码/API 标识与原始会话保持原样；语言默认变更不批量重译历史文档。分派时传递两项设置和目标项目，不把某项目偏好写死在全局 agent 中。
+Skills and generated execution agents follow the [language policy](./_agents/language-policy.md). Internal instruction language is independent from user-output language. Artifact titles, prose, and diagram labels follow project settings; protocol fields, state values, references, code/API identifiers, and original transcripts stay intact. Changing a default does not bulk-translate history. Pass both languages and the target project on delegation rather than baking a project's preferences into global agents.
 
-## 打包给其他团队/仓库使用
+## Sharing with other teams or repositories
 
-分发完整仓库或压缩包，接收方放在长期保留的独立目录，再使用相同安装入口：
+Distribute the complete repository or archive. Recipients keep it in a permanent, separate directory and use the same installer:
 
 ```bash
 cd /path/to/xixiwu_skills
 ./install.sh all
 ```
 
-使用者在自己的项目运行 `/flow-init` 完成 tracker、提交策略、执行模式、基础模型及语言选择；分发模板时无需预填模型或语言偏好。ZIP 用户更新时，将完整新版仓库放到相同位置后重跑 `install.sh`。
+Each user runs `/flow-init` in their own project to configure the tracker, commit strategy, execution mode, base model, and languages. Templates need no prefilled model or language preference. Archive users update by replacing the complete checkout at the same location and rerunning `install.sh`.
 
-## 图示（功能流程图 / 架构图 / 时序图 / 泳道图）
+## Diagrams: flows, architecture, sequences, and swimlanes
 
-流程中的关键节点会生成 **Mermaid 图**（提炼自 archify 的语义契约）。Mermaid 源码是纯文本、可进 git diff，且 GitHub/飞书/VS Code 会原生渲染成图 —— agent 读时是结构化文本，人看时是图。规范见 `_agents/diagram-guide.md`。
+Key stages generate **Mermaid diagrams**, using semantic conventions derived from archify. Mermaid source is plain text suitable for git diff, rendered as diagrams by supported GitHub, Feishu, and VS Code viewers. Agents read structured text; people see diagrams. The conventions live in `_agents/diagram-guide.md`.
 
-**两种图型按场景选：**
+**Choose a diagram type by meaning:**
 
-| 场景 | 图型 | 用途 |
-|------|------|------|
-| 阶段流程、判断分支、循环、泳道分组 | `flowchart` | 项目架构图、feature 流程 |
-| 调用时序、同步/异步、返回、安全边界 | `sequenceDiagram` | spec 的端到端调用流 |
+| Scenario | Type | Purpose |
+|----------|------|---------|
+| Stages, decisions, loops, and swimlane grouping | `flowchart` | Project architecture and feature flows |
+| Call order, sync/async behavior, returns, and security boundaries | `sequenceDiagram` | A Spec's end-to-end interactions |
 
-- **项目架构图**：`/flow-init` 时生成到 `.scratch/architecture.md`（已有代码的仓库），`flowchart` + `subgraph` 泳道，帮 agent 快速理解项目。示例见本仓库的 [`architecture.md`](./architecture.md)
-- **功能流程图**：嵌入 spec 的“方案概述”，`flowchart` 展示业务入口、用户动作、条件分支与结果；模块影响继续用文字清单记录
-- **端到端时序图**：嵌入 spec，`sequenceDiagram` 用 `->>`（同步）/`-->>`（返回）/`-)`（异步）
+- **Project architecture:** `/flow-init` generates `.scratch/architecture.md` for an existing codebase, using `flowchart` and `subgraph` swimlanes to orient agents. See this repository's [architecture example](./architecture.md).
+- **Functional flow:** the Spec's approach contains a `flowchart` of entry points, user actions, branches, and outcomes. Keep module impact as a written list.
+- **End-to-end sequence:** the Spec uses `sequenceDiagram`, with `->>` for synchronous calls, `-->>` for returns, and `-)` for asynchronous messages.
 
-**设计原则：变体即语义。** 图型、箭头、判断节点承载含义而非装饰；标签是语义数据，不为排版删除。
+**Variants carry meaning.** Diagram types, arrows, and decisions are semantic rather than decorative. Labels are data; do not remove them to adjust layout.
 
-## 使用方式
+## Usage
 
-1. 运行 `./install.sh <pi|claude-code|codex|all>` 安装技能与适配文件
-2. **新仓库先运行 `/flow-init`**，确定 tracker、提交策略、执行模式/基础模型，并确认交互与产物语言
-3. 主流程按阶段顺序使用 `/命令` 触发；执行型阶段按 execution-mode 派子 agent 或主会话执行
-4. 遇到难调 bug 时使用 `/flow-debug`
-5. 后端待办完成且涉及对外端点时，用 `/flow-api` 产出契约给前端
+1. Run `./install.sh <pi|claude-code|codex|all>` to install skills and adapters.
+2. **Run `/flow-init` first in a new repository** to choose the tracker, commit strategy, execution mode/base model, and both languages.
+3. Invoke stages in order with `/command`. Execution stages delegate or run inline according to execution-mode.
+4. Use `/flow-debug` for difficult bugs.
+5. After a backend Todo involving public endpoints, use `/flow-api` to produce the contract for frontend integration.
 
-## 文件结构
+## Repository layout
 
 ```
 dev-flow-skills/
-├── README.md
-├── install.sh                # 统一安装和更新入口
-├── TUTORIAL.md               # 端到端叙事走查
-├── architecture.md           # 自身架构示例（mermaid）
-├── _agents/                  # 执行型子 agent 的 prompt 源
+├── README.md                 # English project overview
+├── README.zh-CN.md           # Chinese project overview
+├── install.sh                # Unified installation and update entry point
+├── TUTORIAL.md               # English user guide
+├── TUTORIAL.zh-CN.md          # Chinese user guide
+├── architecture.md           # English architecture example (Mermaid)
+├── architecture.zh-CN.md     # Chinese architecture example (Mermaid)
+├── CONTRIBUTING.md           # English contribution guide
+├── CONTRIBUTING.zh-CN.md     # Chinese contribution guide
+├── _agents/                  # Source prompts for execution sub-agents
 │   ├── README.md
-│   ├── workflow-contract.md  # 共享字段、状态和简化流程
-│   ├── language-policy.md    # 项目交互与产物语言约定，所有角色共用
-│   ├── diagram-guide.md      # 图示规范（非 agent）
+│   ├── workflow-contract.md  # Shared fields, states, and small-change rules
+│   ├── language-policy.md    # Interaction/artifact languages for all roles
+│   ├── diagram-guide.md      # Diagram conventions, not a separate agent
 │   ├── exporter.prompt.md
 │   ├── simplifier.prompt.md
 │   ├── contract-writer.prompt.md
 │   ├── implementer.prompt.md
 │   └── scout.prompt.md
-├── adapters/                 # 跨工具适配
+├── adapters/                 # Cross-tool adapters
 │   ├── build.sh
-│   ├── install.py            # 安装、备份与 agent 配置保留
-│   ├── package_bundle.py     # 从模块化源码构建一个 dev-flow.skill
-│   ├── multica.py            # 工作区包导入、追加绑定及托管角色指令
+│   ├── install.py            # Installation, backups, and agent-config preservation
+│   ├── package_bundle.py     # Build one dev-flow.skill from maintained sources
+│   ├── multica.py            # Workspace import, additive binding, and managed roles
 │   └── codex/README.md
-├── roles/                    # 五种中文持久角色指令，不替代宿主工具权限
-├── tests/                    # 适配脚本检查与流程场景
+├── roles/                    # Five Chinese role instructions; not tool permissions
+├── tests/                    # Adapter checks and workflow scenarios
 ├── flow-run/
 │   ├── SKILL.md
 │   └── references/bot-setup.md
@@ -356,11 +371,11 @@ dev-flow-skills/
     └── SKILL.md
 ```
 
-## 验证
+## Validation
 
 ```bash
 bash -n install.sh adapters/build.sh
 python3 -B -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-自动测试使用临时目录与临时 HOME 验证生成与安装：目标参数、模型优先级、语言约定附带但不绑定项目选择、首次安装、重复更新、旧副本迁移、备份、配置保留、预览及源仓库保护，不写真实用户级目录。技能决策的行为走查见 [`tests/workflow-scenarios.md`](./tests/workflow-scenarios.md)，不以关键词检查代替实际执行。
+Automated tests use temporary directories and a temporary HOME to verify generation and installation: target arguments, model precedence, inclusion of language policy without binding a project's choices, initial installation, repeated updates, legacy migration, backups, configuration preservation, dry runs, and source-checkout protection. They do not write to real user-level directories. See [`tests/workflow-scenarios.md`](./tests/workflow-scenarios.md) for behavioral skill evaluations; keyword checks do not replace actual execution.

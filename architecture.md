@@ -1,82 +1,84 @@
-# Dev Flow Skills 项目架构
+# Dev Flow Skills Architecture
+
+**English** | [简体中文](./architecture.zh-CN.md)
 
 ```mermaid
 flowchart TB
-    subgraph DEV["01 / 开发者"]
-        init["/flow-init<br/>四项配置"]
-        checkpoint["人工确认<br/>checkpoint"]
+    subgraph DEV["01 / Developer"]
+        init["/flow-init<br/>Four settings"]
+        checkpoint["Human confirmation<br/>checkpoint"]
     end
 
-    subgraph MAIN["02 / 主会话（编排）"]
-        grill["/flow-clarify<br/>需求澄清"]
-        spec["/flow-spec<br/>规格定义 + seams"]
-        plan["/flow-plan<br/>方案规划 + 人工审"]
-        tickets["/flow-todo<br/>任务拆分 + 依赖"]
-        implement["/flow-do<br/>实现验证 + Step3.5 修正"]
-        find["/flow-status<br/>只读进度快照"]
-        amend["/flow-amend<br/>已实现 spec 增量演进"]
-        commit["提交<br/>按 commit-strategy"]
+    subgraph MAIN["02 / Main session (coordination)"]
+        grill["/flow-clarify<br/>Align requirements"]
+        spec["/flow-spec<br/>Product Spec + seams"]
+        plan["/flow-plan<br/>Blueprint + human review"]
+        tickets["/flow-todo<br/>Simple Todos + dependencies"]
+        implement["/flow-do<br/>Implement, verify + Step 3.5 correction"]
+        find["/flow-status<br/>Read-only progress snapshot"]
+        amend["/flow-amend<br/>Evolve an implemented Spec"]
+        commit["Commit<br/>Follow commit-strategy"]
     end
 
-    subgraph SUB["EX / 执行型子 agent"]
-        scout["scout<br/>代码侦察 → context.md"]
-        implementer["implementer<br/>实现与验证，复用已有测试"]
-        simplifier["simplifier<br/>提交前清理"]
-        contractwriter["contract-writer<br/>接口契约"]
-        exporter["exporter<br/>会话导出"]
+    subgraph SUB["EX / Execution sub-agents"]
+        scout["scout<br/>Code reconnaissance → context.md"]
+        implementer["implementer<br/>Implement and verify; reuse tests"]
+        simplifier["simplifier<br/>Cleanup before committing"]
+        contractwriter["contract-writer<br/>API contracts"]
+        exporter["exporter<br/>Session export"]
     end
 
-    subgraph OUT["04 / 产出物"]
-        config["docs/agents/<br/>四项配置"]
-        scratch["tracker 产物<br/>Spec / Plan / Todos / API contracts<br/>本地文件或远程独立 issues"]
-        code["代码 + 测试<br/>working tree"]
+    subgraph OUT["04 / Artifacts"]
+        config["docs/agents/<br/>Four settings"]
+        scratch["Tracker artifacts<br/>Spec / Plans / Todos / API contracts<br/>Local files or independent remote issues"]
+        code["Code + tests<br/>Working tree"]
     end
 
     init --> grill
-    init -.写入.-> config
+    init -. writes .-> config
     grill --> spec
     spec --> plan
     plan --> tickets
-    spec -.写入.-> scratch
-    plan -.写入.-> scratch
+    spec -. writes .-> scratch
+    plan -. writes .-> scratch
     tickets --> implement
     implement --> checkpoint
     checkpoint --> commit
-    amend -.生成新版本+续接待办.-> scratch
+    amend -. new version + follow-on Todos .-> scratch
     amend --> implement
 
-    spec -.分派.-> scout
-    scout -.产出.-> scratch
-    implement -.分派.-> implementer
-    implementer -.产出.-> code
-    implement -.提交前.-> simplifier
-    simplifier -.报告.-> checkpoint
-    implement -.涉及端点.-> contractwriter
-    contractwriter -.写入.-> scratch
-    find -.只读扫描.-> scratch
+    spec -. delegates .-> scout
+    scout -. produces .-> scratch
+    implement -. delegates .-> implementer
+    implementer -. produces .-> code
+    implement -. before commit .-> simplifier
+    simplifier -. reports .-> checkpoint
+    implement -. endpoints involved .-> contractwriter
+    contractwriter -. writes .-> scratch
+    find -. read-only scan .-> scratch
 ```
 
-## 泳道说明
+## Swimlanes
 
-| 泳道 | 职责 |
-|------|------|
-| 01 / 开发者 | 发起命令、人工确认（checkpoint） |
-| 02 / 主会话 | 编排：flow-clarify → flow-spec → flow-plan（审）→ flow-todo → flow-do（含 Step 3.5 待办修正）、flow-status、flow-amend |
-| EX / 执行型子 agent | 纯执行：scout（侦察）、implementer（实现与验证）、simplifier（清理）、contract-writer（契约）、exporter（导出），不提交 |
-| 04 / 产出物 | 配置、tracker 中的 Spec/Plan/Todos/API contracts、本地版本索引或远程版本引用、代码与测试 |
+| Lane | Responsibility |
+|------|----------------|
+| 01 / Developer | Invoke commands and provide human checkpoint confirmation |
+| 02 / Main session | Coordinate flow-clarify → flow-spec → reviewed flow-plan → flow-todo → flow-do, including Step 3.5 corrections, flow-status, and flow-amend |
+| EX / Execution sub-agents | Execute bounded work: scout, implementer, simplifier, contract-writer, and exporter; never commit |
+| 04 / Artifacts | Settings, tracker-owned Spec/Plans/Todos/API contracts, local version index or remote provenance, code, and tests |
 
-## 关键流转
+## Key transitions
 
-- **主流程（实线）**：flow-init → flow-clarify → flow-spec → flow-plan（人工审）→ flow-todo → flow-do → 人工确认 → 提交
-- **范围拆解**：Spec → 一个或多个独立 Plan → 各 Plan 的简单工程 Todo；AI 判断 Plan 数量，用户指定数量／分组优先，实际独立性／覆盖冲突先报告，不以内部包编号代替 Plan
-- **增量演进**：Spec 有变动 → flow-amend → 更新版本及所有适用 Plan 引用，仅修改受影响的方案／Todo，保留未变范围的批准与验收 → flow-do
-- **分派（虚线）**：flow-spec → scout；flow-do → implementer / simplifier / contract-writer
-- **版本与状态管理**：本地由 INDEX 记录当前 Spec，远程按 tracker 的版本引用及 Plan 正文 `Spec:` 核对；Todo 用 `Spec:` / `Plan:` 分别关联。默认 `ready → claimed → resolved`，搁置用 `parked`，旧 `code-complete` 只按 tracker 声明兼容。本票实现、必要工程检查、审查和必需产物通过后自动 resolved，远程同步关闭并核对状态；squash 不阻塞下游。人工功能验收集中到 Plan（无 Plan 时 Spec），提交另需用户授权，均不阻止合格待办关闭。共享定义见 `_agents/workflow-contract.md`
-- **人工卡点**：simplifier 报告 → 人工确认 → 提交
+- **Main path (solid arrows):** flow-init → flow-clarify → flow-spec → reviewed flow-plan → flow-todo → flow-do → human confirmation → commit.
+- **Scope decomposition:** Spec → one or more independent Plans → each Plan's simple engineering Todos. AI chooses the count unless the user specifies count/grouping. Explain actual coverage/independence conflicts first; package numbers do not replace peer Plans.
+- **Incremental evolution:** changed Spec → flow-amend → new version and complete applicable Plan registry, updating only affected Plans/Todos while preserving unchanged approvals/acceptance → flow-do.
+- **Delegation (dotted arrows):** flow-spec → scout; flow-do → implementer / simplifier / contract-writer.
+- **Versions and state:** locally, INDEX identifies the current Spec; remotely, verify tracker version references against each Plan's `Spec:`. Todos separate `Spec:` and `Plan:`. Default states are `ready → claimed → resolved`, with `parked` for deferred work; legacy `code-complete` follows the tracker declaration only. Once implementation, required engineering checks, review, and required artifacts pass, resolve automatically and synchronize/verify remote closure. Squash does not delay downstream engineering work. Human functional acceptance belongs to Plan, otherwise Spec; Git needs separate authorization. Neither delays qualified Todo closure. See `_agents/workflow-contract.md`.
+- **Human checkpoint:** simplifier report → human confirmation → commit.
 
-## 设计原则
+## Design principles
 
-- **编排与执行分离**：主会话决策，子 agent 执行
-- **决策前置**：Spec/Todo/Plan 拍死决策（Spec=产品、Plan=技术、Todo=执行细节），子 agent 遇未覆盖决策即停止报告
-- **产出物即输入**：本地文件或远程 Spec/Plan/Todo issues 驱动实现；远程 Plan 使用独立 issue 正文并双向关联，配置决定主存
-- **方向修正闭环**：implementer 报方向错误 → 主会话 Step 3.5 对齐修正 + 按需回写 spec → 重新分派（≥2 次则停，人工介入）
+- **Separate coordination from execution:** the main session decides; sub-agents execute.
+- **Settle decisions upstream:** Spec owns product decisions, Plan technical choices, and Todo execution details. Workers stop and report uncovered decisions.
+- **Artifacts are inputs:** local files or remote Spec/Plan/Todo issues drive implementation. A remote Plan's current approach lives in its own issue body with backlinks; configuration determines the authoritative store.
+- **Close the correction loop:** implementer reports a direction error → main session aligns and corrects under Step 3.5, updating the Spec where needed → redispatch. Two consecutive errors stop automatic retries for human alignment.
